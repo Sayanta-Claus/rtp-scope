@@ -133,11 +133,62 @@ build-san/test_mutation
 
 ### Real captures
 
-I also ran three small public captures through rtp_scope and tshark 3.6.2: a two-way PCMU call, a short PCMA stream among DNS and NetBIOS traffic, and H.263 video over a loopback link. Both tools found the same 4 streams. Packets and loss agree on every stream, and jitter agrees to three decimals on 3 of the 4. The exception is the mean jitter of the H.263 stream (17.659 ms for rtp_scope, 15.505 ms for tshark), which I couldn't explain; the max matches. The table, the cause of each difference and the exact commands are in [results/real-captures.md](results/real-captures.md). The capture files are not in the repo because they contain IP addresses.
+Three small public captures, run through rtp_scope and tshark 3.6.2. The capture files are not in the repo because they contain IP addresses, so streams are identified by SSRC; A→B is the direction whose packets appear first in the capture. The numbers are copied from the output of `python3 scripts/crosscheck_pcap.py --bin build captures/*.pcap`, which runs the two commands listed for each capture. `-o rtp.heuristic_rtp:TRUE` makes tshark detect RTP on any UDP port, so this checks the numbers, not rtp_scope's RTP detection.
 
-None of the three captures has packet loss or reordering, so the loss and reordering logic has only been checked against generated traffic, not against a real lossy call.
+Overall: 3 captures, 4 RTP streams. Packets, loss and max jitter are identical on all 4 streams; mean jitter is identical on 3 and differs on the H.263 stream, for the reason given below. None of the captures has packet loss or reordering, so the loss and reordering logic has only been checked against generated traffic.
 
-Running on real captures found two problems that generated traffic couldn't:
+#### MagicJack-_short_call.pcap
+
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json MagicJack-_short_call.pcap
+tshark -r MagicJack-_short_call.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x2a173650 PCMU A→B | 642 / 642 | 0 / 0 | 12.234 / 12.234 | 12.838 / 12.838 |
+| 0x31be1e0e PCMU B→A | 626 / 626 | 0 / 0 | 0.229 / 0.229 | 0.832 / 0.832 |
+
+Differences: none.
+
+#### aaa.pcap
+
+Source: not recorded (to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json aaa.pcap
+tshark -r aaa.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x3796cb71 PCMA | 9 / 9 | 0 / 0 | 5.646 / 5.646 | 7.799 / 7.799 |
+
+Differences: none.
+
+#### h263-over-rtp.pcap
+
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json h263-over-rtp.pcap
+tshark -r h263-over-rtp.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x5482ece0 H.263 video | 45 / 45 | 0 / 0 | **17.659 / 15.505** | 32.186 / 32.186 |
+
+Differences: mean jitter, 17.659 (rtp_scope) vs 15.505 (tshark). Cause: tshark leaves packets with the RTP marker bit set out of its mean and max jitter (they still count in the divisor of its mean), while rtp_scope averages over every packet. H.263 sets the marker on the last packet of each video frame, 10 of the 45 packets here. Evidence: on traces I built where only the marker bit changes, tshark and rtp_scope agree exactly when no packet has the bit set, and tshark reports 0 jitter when every packet has it. A model of that rule reproduces tshark's mean and max on all 7 rows of [results/marker-experiment.txt](results/marker-experiment.txt), this file included. I fitted the rule to tshark's output and have not read Wireshark's source, so it is inferred, not confirmed.
+
+To reproduce the marker-bit finding: `python3 scripts/marker_experiment.py --bin build captures/h263-over-rtp.pcap | tee results/marker-experiment.txt`.
+
+Running on real captures also found two problems that generated traffic couldn't:
 
 - DNS and NetBIOS packets were reported as RTP "streams" (2 extra in one file, 7 in another, plus 49 "malformed RTP" that were DNS). That led to the port list and the sequence-number check described above.
 - The H.263 file uses link type 0 (loopback), which was rejected, so I added it.

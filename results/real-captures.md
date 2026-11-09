@@ -1,41 +1,68 @@
-# Real captures: rtp_scope vs tshark
+# Real capture cross-check
 
-Three small public sample captures were run through both tools. The captures themselves are not in the repo, and IP addresses are left out of this table. All numbers are "rtp_scope / tshark".
-
-| Capture | Source | Stream | Packets | Lost | Jitter mean (ms) | Jitter max (ms) |
-|---|---|---|---:|---:|---:|---:|
-| MagicJack-_short_call.pcap | wiki sample (see note) | PCMU, direction A to B, SSRC 0x2a173650 | 642 / 642 | 0 / 0 | 12.234 / 12.234 | 12.838 / 12.838 |
-| MagicJack-_short_call.pcap | wiki sample (see note) | PCMU, direction B to A, SSRC 0x31be1e0e | 626 / 626 | 0 / 0 | 0.229 / 0.229 | 0.832 / 0.832 |
-| aaa.pcap | not recorded (see note) | PCMA, SSRC 0x3796cb71 | 9 / 9 | 0 / 0 | 5.646 / 5.646 | 7.799 / 7.799 |
-| h263-over-rtp.pcap | wiki sample (see note) | H.263 video, SSRC 0x5482ece0 | 45 / 45 | 0 / 0 | **17.659 / 15.505** | 32.187 / 32.186 |
-
-Note on sources: the file names for MagicJack and h263 match entries on the [Wireshark SampleCaptures wiki](https://wiki.wireshark.org/SampleCaptures), but I did not record where each file was downloaded from, and I don't know the origin of `aaa.pcap`. Confirm the source and terms of each file before relying on this column.
-
-## What agrees and what doesn't
-
-Both tools found the same 4 streams and agree on packets and loss in every case. "Lost" is the RFC 3550 value (expected minus received, duplicates counted as received), which is what tshark prints. Jitter agrees to three decimals on 3 of the 4 streams.
-
-Differences:
-
-- **H.263 mean jitter, 17.659 vs 15.505 ms: cause not found.** The max matches, so the per-packet jitter values are right and only the averaging differs; the video frames are split into several packets that share one RTP timestamp, which the other three streams don't do. I tried several averaging formulas on tshark's own packet data and none reproduced 15.505.
-- **H.263 max jitter, 32.187 vs 32.186 ms: last digit.** My value is 32.1865 and rounds up; tshark shows 32.186. Probably rounding or truncation; I didn't investigate further.
-- **Fixed before this table (not a current difference):** the first run found extra "streams" in two files, DNS and NetBIOS packets that looked like RTP, and rejected the H.263 file because of its loopback link type. Both were fixed in rtp_scope (see the README).
-
-## How to reproduce
-
-tshark 3.6.2; rtp_scope as of commit `e550855`. Put the three files in `captures/` (git-ignored), then:
+rtp_scope vs tshark 3.6.2 on three small public captures. The capture files are not in the repo (they contain IP addresses), so streams are identified by SSRC; A→B is the direction whose packets appear first in the capture. Numbers are copied from the output of:
 
 ```
-cmake -S . -B build && cmake --build build -j
-python3 scripts/crosscheck_pcap.py --bin build \
-    captures/MagicJack-_short_call.pcap captures/aaa.pcap captures/h263-over-rtp.pcap
+python3 scripts/crosscheck_pcap.py --bin build captures/MagicJack-_short_call.pcap captures/aaa.pcap captures/h263-over-rtp.pcap
 ```
 
-For each file the script runs these two commands and pairs the streams by addresses, ports and SSRC:
+which runs the two commands listed under each capture. `-o rtp.heuristic_rtp:TRUE` makes tshark detect RTP on any UDP port, so this checks the numbers, not rtp_scope's RTP detection. "Lost" is the RFC 3550 value (expected minus received, duplicates counted as received), which is what tshark prints.
+
+Overall: 3 captures, 4 RTP streams. Packets, loss and max jitter are identical on all 4 streams; mean jitter is identical on 3 and differs on the H.263 stream, for the reason given below. None of the captures has packet loss or reordering.
+
+## MagicJack-_short_call.pcap
+
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json MagicJack-_short_call.pcap
+tshark -r MagicJack-_short_call.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x2a173650 PCMU A→B | 642 / 642 | 0 / 0 | 12.234 / 12.234 | 12.838 / 12.838 |
+| 0x31be1e0e PCMU B→A | 626 / 626 | 0 / 0 | 0.229 / 0.229 | 0.832 / 0.832 |
+
+Differences: none.
+
+## aaa.pcap
+
+Source: not recorded (to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json aaa.pcap
+tshark -r aaa.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x3796cb71 PCMA | 9 / 9 | 0 / 0 | 5.646 / 5.646 | 7.799 / 7.799 |
+
+Differences: none.
+
+## h263-over-rtp.pcap
+
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+
+Commands:
+```
+./build/rtp_scope --json h263-over-rtp.pcap
+tshark -r h263-over-rtp.pcap -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
+```
+
+| Stream (SSRC) | Packets (yours / tshark) | Lost (yours / tshark) | Mean jitter ms (yours / tshark) | Max jitter ms (yours / tshark) |
+|---|---|---|---|---|
+| 0x5482ece0 H.263 video | 45 / 45 | 0 / 0 | **17.659 / 15.505** | 32.186 / 32.186 |
+
+Differences: mean jitter, 17.659 (rtp_scope) vs 15.505 (tshark). Cause: tshark leaves packets with the RTP marker bit set out of its mean and max jitter (they still count in the divisor of its mean), while rtp_scope averages over every packet. H.263 sets the marker on the last packet of each video frame, 10 of the 45 packets here. Evidence: on traces I built where only the marker bit changes, tshark and rtp_scope agree exactly when no packet has the bit set, and tshark reports 0 jitter when every packet has it. A model of that rule reproduces tshark's mean and max on all 7 rows of [results/marker-experiment.txt](marker-experiment.txt), this file included. I fitted the rule to tshark's output and have not read Wireshark's source, so it is inferred, not confirmed.
+
+## Reproducing the marker-bit finding
 
 ```
-tshark -r FILE -q -o rtp.heuristic_rtp:TRUE -z rtp,streams
-build/rtp_scope --json FILE
+python3 scripts/marker_experiment.py --bin build captures/h263-over-rtp.pcap | tee results/marker-experiment.txt
 ```
 
-The `-o rtp.heuristic_rtp:TRUE` option makes tshark detect RTP on any UDP port, so this checks the numbers, not rtp_scope's RTP detection. The script's raw output contains addresses, so the repo does not keep it.
+It builds synthetic video-like traces where only the marker bit changes and prints tshark, rtp_scope and the inferred model side by side (output in [marker-experiment.txt](marker-experiment.txt)).

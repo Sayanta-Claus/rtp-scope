@@ -1,0 +1,11 @@
+# scripts/marker_experiment.py --bin build captures/h263-over-rtp.pcap
+# TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)
+trace (mean / max jitter, ms)            | tshark            | rtp_scope         | model of tshark  
+1 packet(s)/frame, marker on none        |   1.429 / 2.094   |   1.429 / 2.094   |   1.429 / 2.094  
+3 packet(s)/frame, marker on none        |   0.950 / 1.442   |   0.950 / 1.442   |   0.950 / 1.442  
+3 packet(s)/frame, marker on last        |   0.840 / 1.442   |   0.950 / 1.442   |   0.840 / 1.442  
+3 packet(s)/frame, marker on first       |   0.801 / 1.383   |   0.950 / 1.442   |   0.801 / 1.383  
+1 packet(s)/frame, marker on all         |   0.000 / 0.000   |   1.429 / 2.094   |   0.000 / 0.000  
+3 packet(s)/frame, marker on all         |   0.000 / 0.000   |   0.950 / 1.442   |   0.000 / 0.000  
+h263-over-rtp.pcap                       |  15.505 / 32.186  |  17.659 / 32.186  |  15.505 / 32.186 
+model matches tshark (within 0.0015 ms) on every row: yes
