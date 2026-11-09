@@ -18,8 +18,10 @@
 
 #include <ostream>
 #include <string>
+#include <vector>
 
 #include "analyzer.hpp"
+#include "jitter_buffer.hpp"
 
 namespace rtpscope {
 
@@ -31,5 +33,9 @@ std::string json_escape(const std::string& text);
 
 void print_text(std::ostream& out, const std::string& file, const Analyzer& analyzer);
 void print_json(std::ostream& out, const std::string& file, const Analyzer& analyzer);
+
+// Comparison table of jitter-buffer strategies for one stream.
+void print_simulation(std::ostream& out, size_t stream_index, const StreamStats& stream,
+                      const std::vector<SimResult>& results);
 
 }  // namespace rtpscope

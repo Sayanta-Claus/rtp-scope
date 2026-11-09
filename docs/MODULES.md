@@ -200,3 +200,25 @@ Data flow added in this milestone:
 - *What does "reordered" mean here?* One reordered packet = one packet that arrives after a packet with a higher sequence number; with adjacent swaps that is exactly one per swap, and it is what a receiver can observe.
 - *Why is "lost" the observable loss?* A receiver cannot know about packets dropped before the first or after the last delivered one, so `packets_lost` counts drops between the lowest and highest delivered packet (the truth file also has `packets_dropped` for everything).
 - *Why `--wrap`?* Starting at 65500 makes the 16-bit sequence number wrap after 36 packets, exercising the extended-sequence logic.
+
+---
+
+# Milestone 4: jitter-buffer simulator
+
+```
+ StreamStats.arrivals --> make_trace --> PlayoutTrace --+--> simulate_fixed    --> SimResult --+--> table (--simulate)
+ (arrival time, RTP ts,                (arrival_s,      |                                        |
+  marker, duplicate)                    media_s, marker)+--> simulate_adaptive --> SimResult --+--> CSV   (--sweep)
+```
+
+## jitter_buffer (`src/jitter_buffer.*`)
+
+**How it works.** For each packet, *transit* `n = arrival - media time` (media time comes from the unwrapped RTP timestamp, both measured from the first packet). A buffer with playout delay `D` plays the packet at `media + D`; if `n <= D` it is on time and waits `D - n` in the buffer, otherwise it is late and discarded. Lost = expected minus arrived. **Fixed** uses a constant `D`. **Adaptive** (Ramjee et al. 1994, algorithm 1) keeps an EWMA of the transit `d` and of its deviation `v` and targets `D = d + k*v`; the delay jumps to the target at talkspurt boundaries (marker bit, or a long gap in media time) and otherwise creeps towards it by at most 0.5 ms per packet, so playback never glitches.
+
+**Questions an interviewer might ask**
+- *What does a jitter buffer trade off?* Latency against late-packet loss: a bigger buffer absorbs more network jitter but delays the audio (interactive calls want under ~150-200 ms end to end). The `--sweep` output draws exactly this curve.
+- *Why adapt only at talkspurt boundaries?* Changing delay in the middle of speech means stretching or squeezing audio (audible). Silence between talkspurts can be lengthened or shortened unnoticed.
+- *Why mean + k * deviation?* If transit were roughly normal, k = 4 covers almost all of the distribution; a larger k means fewer late packets and more latency.
+- *Why the bias-corrected weight in the estimator?* With alpha = 0.998 a plain EWMA would take ~500 packets (10 s of audio) to forget its start value; using `min(alpha, 1 - 1/count)` makes the first samples a running average.
+- *What about packets that are lost?* A jitter buffer cannot fix them; they are reported separately (and a real codec would conceal them with packet-loss concealment).
+- *How is lateness judged causally?* The delay applied to a packet is the one chosen before that packet's own transit enters the estimate.

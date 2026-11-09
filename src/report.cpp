@@ -113,6 +113,23 @@ void print_text(std::ostream& out, const std::string& file, const Analyzer& a) {
     }
 }
 
+void print_simulation(std::ostream& out, size_t index, const StreamStats& s, const std::vector<SimResult>& results) {
+    out << fmt("\njitter-buffer simulation, stream #%zu (%s -> %s, SSRC 0x%08x, %u Hz)\n", index,
+               endpoint(s.key().src_ip, s.key().src_port).c_str(),
+               endpoint(s.key().dst_ip, s.key().dst_port).c_str(), s.key().ssrc, s.clock_rate());
+    if (results.empty()) return;
+    out << fmt("  expected %llu packets; %llu never arrived (lost in the network)\n\n", u(results[0].expected),
+               u(results[0].lost));
+    out << fmt(" %-16s %8s %6s %6s %12s %13s %13s\n", "strategy", "played", "late", "lost", "late+lost %",
+               "avg lat (ms)", "max lat (ms)");
+    for (const SimResult& r : results) {
+        out << fmt(" %-16s %8llu %6llu %6llu %12.2f %13.2f %13.2f\n", r.strategy.c_str(), u(r.played), u(r.late),
+                   u(r.lost), r.late_or_lost_percent, r.avg_latency_ms, r.max_latency_ms);
+    }
+    out << "\n  late = arrived after its playout time (discarded); latency = time a played packet\n"
+           "  waits in the buffer. Playout is scheduled relative to the first packet that arrived.\n";
+}
+
 void print_json(std::ostream& out, const std::string& file, const Analyzer& a) {
     const Counters& c = a.counters();
     out << "{\n";

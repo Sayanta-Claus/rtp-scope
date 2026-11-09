@@ -36,6 +36,7 @@ set(CORE_SOURCES
   src/pcap_writer.cpp
   src/traffic_model.cpp
   src/trace_gen.cpp
+  src/jitter_buffer.cpp
 )
 
 add_library(rtpscope_core STATIC ${CORE_SOURCES})
@@ -61,6 +62,7 @@ set(TEST_NAMES
   test_report
   test_traffic
   test_e2e
+  test_jitter_buffer
 )
 foreach(t ${TEST_NAMES})
   add_executable(${t} tests/${t}.cpp)
