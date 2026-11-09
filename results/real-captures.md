@@ -12,7 +12,7 @@ Overall: 3 captures, 4 RTP streams. Packets, loss and max jitter are identical o
 
 ## MagicJack-_short_call.pcap
 
-Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures
 
 Commands:
 ```
@@ -29,7 +29,7 @@ Differences: none.
 
 ## aaa.pcap
 
-Source: not recorded (to be confirmed)
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures
 
 Commands:
 ```
@@ -45,7 +45,7 @@ Differences: none.
 
 ## h263-over-rtp.pcap
 
-Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures (exact file page not recorded, to be confirmed)
+Source: Wireshark SampleCaptures wiki, https://wiki.wireshark.org/SampleCaptures
 
 Commands:
 ```
