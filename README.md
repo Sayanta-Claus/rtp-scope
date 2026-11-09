@@ -79,11 +79,11 @@ $ rtp_scope --simulate demo.pcap
 
 ## How it works
 
-Packets go through `pcap_reader` -> `net_decode` (Ethernet with VLAN tags or Linux SLL, IPv4, UDP) -> `classify` (RTP / RTCP / other) -> per-stream stats -> report or jitter-buffer simulation.
+Packets go through `pcap_reader` -> `net_decode` (Ethernet with VLAN tags, Linux SLL or BSD loopback, IPv4, UDP) -> `classify` (RTP / RTCP / other) -> per-stream stats -> report or jitter-buffer simulation.
 
-- **pcap**: classic format, both byte orders, microsecond and nanosecond timestamps. Records are streamed, so memory doesn't grow with the file. Other link types are rejected with an error.
+- **pcap**: classic format, both byte orders, microsecond and nanosecond timestamps. Records are streamed, so memory doesn't grow with the file. Link types Ethernet, Linux SLL and BSD loopback are supported; others are rejected with an error.
 - **Bad input** is counted, not fatal. Every frame ends up in exactly one counter.
-- **RTP detection** is a heuristic: version 2, not an RTCP type, and CSRC list, extension and padding must fit in the packet. RTCP (types 200-204) is only counted.
+- **RTP detection** is a heuristic. A packet must have version 2, not be an RTCP type, and its CSRC list, extension and padding must fit. Real captures showed that isn't enough (DNS and NetBIOS packets often pass), so two more rules apply: UDP ports of other well-known protocols (53, 67/68, 123, 137/138, 161/162, 514, 1900, 5353, 5355) are never RTP, and a stream is only reported once it has two packets with consecutive sequence numbers (the "probation" idea from RFC 3550 A.1). Packets that looked like RTP but never formed a sequence are counted as non-RTP and shown in the report. RTCP (types 200-204) is only counted.
 - **Loss** follows RFC 3550 appendix A.1. The 16-bit sequence number is extended to a counter that survives wraparound, and a bitmap tells duplicates from late packets. `expected = highest - base + 1` and `lost = expected - unique received`, never below 0. The JSON also has `lost_rfc_signed`, which counts duplicates as received and can go negative, like the RFC and Wireshark.
 - **Jitter** is section 6.4.1: `J += (|D| - J) / 16`, where D is the change in packet spacing between arrival and RTP timestamp. It is shown in timestamp units and in ms. Default clock rates: 8000 for PCMU/PCMA/G.722, 90000 for video types, 48000 for dynamic payload types (so Opus works). Change them with `--clock-rate PT=HZ`.
 - **Jitter buffer**: a packet is on time if its network transit is at most the playout delay D, and late (dropped) otherwise. The fixed buffer uses a constant D. The adaptive one follows Ramjee et al. (1994): a moving average of transit time plus k times its deviation. It jumps to the new delay at talkspurt starts (marker bit or a gap over 100 ms) and otherwise moves at most 0.5 ms per packet.
@@ -114,10 +114,12 @@ Median of 5 runs on 1,000,000 generated packets (991,859 in the file after 1% lo
 
 | stage | packets/sec | MB/s |
 |---|---:|---:|
-| parse only | 10,313,912 | 2,372 |
-| parse + analysis | 11,191,082 | 2,574 |
+| parse only | 5,492,337 | 1,263 |
+| parse + analysis | 5,317,374 | 1,223 |
 
-Peak memory was 4,740 kB. The file sits in the page cache, so this is CPU speed, not disk. Parse-only came out slower than parse + analysis, which is just noise: the two are within a few percent of each other. Running under WSL2 means bare-metal numbers will differ.
+Peak memory was 4,756 kB. The file sits in the page cache, so this is CPU speed, not disk. Parse-only and parse + analysis are within noise of each other.
+
+This laptop is not a steady benchmark machine: an earlier session measured about 11M packets/sec for what was then the same parsing code. I built the previous commit next to the current one and ran both back to back; they came out the same (6-7M packets/sec at that moment), so the change is the machine, not the code. Treat the numbers as the right order of magnitude, not as exact. WSL2 also means bare-metal numbers will differ.
 
 ### Robustness
 
@@ -127,7 +129,29 @@ scripts/fuzz.sh --bin build-san --count 1000 | tee results/robustness.txt
 build-san/test_mutation
 ```
 
-1000 corrupted captures (bit flips, truncation, overwritten bytes, extreme field values; fixed seeds) were run through `rtp_scope` built with the sanitizers: 849 analysed, 151 rejected with an error, no crashes, hangs or sanitizer reports. `test_mutation` does 3000 more in-process, also clean. This is random mutation with fixed seeds, not coverage-guided fuzzing.
+1000 corrupted captures (bit flips, truncation, overwritten bytes, extreme field values; fixed seeds) were run through `rtp_scope` built with the sanitizers: 809 analysed, 191 rejected with an error, no crashes, hangs or sanitizer reports. (`--simulate` exits with an error when a damaged file has no usable stream, which is most of the rejections.) `test_mutation` does 3000 more in-process (2649 analysed, 351 rejected), also clean. This is random mutation with fixed seeds, not coverage-guided fuzzing.
+
+### Real captures
+
+The tests above all use traffic from `rtp_gen`, so I also ran three public captures. I haven't committed them (they're git-ignored). The [Wireshark SampleCaptures wiki](https://wiki.wireshark.org/SampleCaptures) lists public captures like these; check the terms there before reusing any. I used `MagicJack-_short_call.pcap` (two PCMU directions of a VoIP call), `h263-over-rtp.pcap` (H.263 video, loopback link type, with SIP on port 5060) and `aaa.pcap` (a short PCMA stream among DNS and NetBIOS traffic).
+
+```
+python3 scripts/crosscheck_pcap.py --bin build captures/*.pcap | tee results/real-captures.txt
+```
+
+| capture | stream | packets (tshark / rtp_scope) | lost | mean jitter ms | max jitter ms |
+|---|---|---|---|---|---|
+| MagicJack | .10:49154 -> 216.234.64.16:54550, PCMU | 642 / 642 | 0 / 0 | 12.234 / 12.234 | 12.838 / 12.838 |
+| MagicJack | 216.234.64.16:54550 -> .10:49154, PCMU | 626 / 626 | 0 / 0 | 0.229 / 0.229 | 0.832 / 0.832 |
+| aaa | 192.168.1.2:30000 -> 212.242.33.36:40392, PCMA | 9 / 9 | 0 / 0 | 5.646 / 5.646 | 7.799 / 7.799 |
+| h263-over-rtp | 192.168.6.199:57128 -> :32976, H.263 | 45 / 45 | 0 / 0 | 15.505 / 17.659 | 32.186 / 32.187 |
+
+Both tools find the same 4 streams and agree on packets and loss. Mean and max jitter agree exactly except for the H.263 mean. Running `rtp_scope` on the files had also shown some things my synthetic tests couldn't:
+
+- The first version reported DNS and NetBIOS packets as RTP "streams" (2 extra in MagicJack, 7 in `aaa.pcap`, plus 49 "malformed RTP" that were DNS). That led to the port list and sequence-number check described above.
+- `h263-over-rtp.pcap` has link type 0 (loopback), which was rejected, so I added it.
+
+The H.263 mean jitter is unexplained. The max matches to three decimals, so the per-packet jitter values are right; only the averaging differs (tshark 15.505, mine 17.659, a plain average of the same per-packet values). Video frames are split into several packets with the same RTP timestamp, which none of my other test streams do. I tried a few other averaging formulas and none reproduced tshark's number, so I don't know what it does there. Wireshark's own reading of this file also used `-o rtp.heuristic_rtp:TRUE`, so this checks the numbers, not the detection.
 
 ### Jitter buffer sweep
 
@@ -181,28 +205,27 @@ tshark was told to decode UDP port 5004 as RTP, so this checks the numbers, not 
 
 - Bitrate counts RTP header + payload over (last arrival - first arrival), not UDP/IP/Ethernet overhead.
 - Streams are keyed by source/destination address and port plus SSRC. The first packet's payload type sets the clock rate.
-- I skipped the "probation" step of RFC 3550 A.1; streams are already split by SSRC.
 - A frame cut short by the capture snaplen counts as malformed.
 - In `rtp_gen`, "normal" jitter is `|N(0, J)|` and "uniform" is `U[0, J]`, since delay can't be negative. Generated traffic passes through a FIFO path, so jitter alone never reorders; reordering is a separate option.
 - `--simulate` and `--sweep` use the stream with the most packets, or `--stream N`.
 
 ## Limits
 
-- IPv4 only, classic pcap only (no pcapng), Ethernet and Linux SLL link types only. Fragments are skipped, not reassembled.
-- RTP detection is a heuristic, so random UDP can occasionally pass for RTP. There's no SDP handling, so dynamic payload types rely on defaults or `--clock-rate`.
+- IPv4 only, classic pcap only (no pcapng), Ethernet, Linux SLL and BSD loopback link types only. Fragments are skipped, not reassembled.
+- RTP detection is a heuristic. A stream with fewer than two consecutive packets is not reported, and RTP on one of the excluded well-known ports (for example 53 or 137) would be missed. There's no SDP handling, so dynamic payload types rely on defaults or `--clock-rate`.
 - RTCP is not parsed.
 - The jitter-buffer model anchors playout to the first packet and ignores clock drift and loss concealment.
 - Reordering deeper than 100 packets is treated as a sequence jump (A.1 limits).
-- Not done yet: the GitHub Actions workflow hasn't run, and everything was tested on one machine (WSL2, GCC 11 and Clang 14) using generated traffic only. I haven't tried a capture from a real call.
+- Not done yet: the GitHub Actions workflow hasn't run, and everything was tested on one machine (WSL2, GCC 11 and Clang 14). Real traffic was limited to three small public captures, none with loss or reordering.
 
 ## Layout
 
 ```
 src/      library: parsing, stats, jitter buffer, generator
 tools/    rtp_scope, rtp_gen, pcap_mutate
-tests/    small test harness, 12 test programs + cli_smoke.sh (13 ctest tests)
+tests/    small test harness, 13 test programs + cli_smoke.sh (14 ctest tests)
 bench/    benchmark
-scripts/  validate, fuzz, bench, sweep + plot, tshark comparison, demo
+scripts/  validate, fuzz, bench, sweep + plot, tshark comparison (synthetic and real), demo
 results/  saved output of the commands above
 docs/     MODULES.md
 ```

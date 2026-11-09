@@ -12,11 +12,11 @@ capture  : 1000000 packets sent by the generator (1% loss, 0.5% reorder, 0.2% du
 runs     : 5 (median reported)
 
 stage                     packets/sec         MB/s
-parse only                   10313912       2372.2
-parse + analysis             11191082       2573.9
+parse only                    5492337       1263.2
+parse + analysis              5317374       1223.0
 
-median parse time    : 0.0962 s
-median analysis time : 0.0886 s
-peak memory (median) : 4740 kB  (VmHWM; getrusage ru_maxrss: 4524 kB)
+median parse time    : 0.1806 s
+median analysis time : 0.1865 s
+peak memory (median) : 4756 kB  (VmHWM; getrusage ru_maxrss: 4540 kB)
 
-individual runs (analyze packets/sec): 11132320 10356681 11881754 11191082 11470405 
+individual runs (analyze packets/sec): 5071131 5653929 5502012 5317374 4915372 

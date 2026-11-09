@@ -1,0 +1,15 @@
+# scripts/crosscheck_pcap.py --bin build captures/MagicJack-_short_call.pcap captures/aaa.pcap captures/h263-over-rtp.pcap
+# TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)   (tshark run with -o rtp.heuristic_rtp:TRUE)
+
+MagicJack-_short_call.pcap: tshark finds 2 stream(s), rtp_scope finds 2
+  stream (source -> destination, SSRC)       payload  |  pkts ts/rs | lost ts/rs | mean jitter ms ts/rs | max jitter ms ts/rs
+  192.168.0.10:49154 -> 216.234.64.16:54550  2a173650 g711U    |   642/642   |    0/0    |   12.234 / 12.234   |   12.838 / 12.838  
+  216.234.64.16:54550 -> 192.168.0.10:49154  31be1e0e g711U    |   626/626   |    0/0    |    0.229 / 0.229    |    0.832 / 0.832   
+
+aaa.pcap: tshark finds 1 stream(s), rtp_scope finds 1
+  stream (source -> destination, SSRC)       payload  |  pkts ts/rs | lost ts/rs | mean jitter ms ts/rs | max jitter ms ts/rs
+  192.168.1.2:30000 -> 212.242.33.36:40392  3796cb71 g711A    |     9/9     |    0/0    |    5.646 / 5.646    |    7.799 / 7.799   
+
+h263-over-rtp.pcap: tshark finds 1 stream(s), rtp_scope finds 1
+  stream (source -> destination, SSRC)       payload  |  pkts ts/rs | lost ts/rs | mean jitter ms ts/rs | max jitter ms ts/rs
+  192.168.6.199:57128 -> 192.168.6.199:32976  5482ece0 h263     |    45/45    |    0/0    |   15.505 / 17.659   |   32.186 / 32.187  

@@ -37,7 +37,7 @@ Plain-English tour of every module, with the questions an interviewer is likely 
 
 ## pcap_reader (`src/pcap_reader.*`)
 
-**How it works.** Reads the 24-byte global header, reads the magic as big-endian and matches one of four values to learn byte order and microsecond/nanosecond timestamps. Then it streams 16-byte record headers + data through one reusable buffer. Link types 1 (Ethernet) and 113 (Linux SLL) are accepted; others are rejected with a message.
+**How it works.** Reads the 24-byte global header, reads the magic as big-endian and matches one of four values to learn byte order and microsecond/nanosecond timestamps. Then it streams 16-byte record headers + data through one reusable buffer. Link types 0 (BSD loopback), 1 (Ethernet) and 113 (Linux SLL) are accepted; others are rejected with a message.
 
 **Questions**
 - *How do you detect byte order?* The magic `0xa1b2c3d4` is written in the writer's native order, so reading it as big-endian gives either `a1b2c3d4` (file is BE) or `d4c3b2a1` (file is LE).
@@ -47,7 +47,7 @@ Plain-English tour of every module, with the questions an interviewer is likely 
 
 ## net_decode (`src/net_decode.*`)
 
-**How it works.** Skips the link header (Ethernet 14 bytes plus any number of 802.1Q/802.1ad tags, or the 16-byte SLL pseudo header), checks the ethertype is IPv4, parses the IPv4 header using IHL*4 as its length, rejects fragments, and parses the UDP header. The IP `total_length` (not the captured length) bounds the payload, so Ethernet padding is ignored.
+**How it works.** Skips the link header (Ethernet 14 bytes plus any number of 802.1Q/802.1ad tags, the 16-byte SLL pseudo header, or the 4-byte BSD loopback header), checks the ethertype is IPv4, parses the IPv4 header using IHL*4 as its length, rejects fragments, and parses the UDP header. The IP `total_length` (not the captured length) bounds the payload, so Ethernet padding is ignored.
 
 **Questions**
 - *Why can't you just assume a 20-byte IP header?* IP options make it 20 to 60 bytes; IHL gives the length in 32-bit words.
@@ -70,18 +70,21 @@ Plain-English tour of every module, with the questions an interviewer is likely 
 **Questions**
 - *How does Wireshark find RTP on arbitrary ports?* Same idea: heuristics (plus signalling such as SDP when available).
 - *Why check RTCP first?* A Sender Report also has version 2, and its byte 1 (200) would look like marker + payload type 72.
-- *What can go wrong?* Random UDP can pass the weak test (false positive); the README lists this as a known limitation.
+- *What can go wrong?* Random UDP can pass the structural test: DNS and NetBIOS packets start with a random transaction id, so one in four has "version 2". My first run on real captures showed exactly that (fake "streams" with SSRC 0). The fix is in `analyzer`, below; the classifier itself stays a cheap per-packet check.
 
 ## analyzer (`src/analyzer.*`)
 
-**How it works.** Loops over records: decode, classify, and increment exactly one counter, so `frames` always equals the sum of every bucket.
+**How it works.** Loops over records: decode, classify, and increment exactly one counter, so `frames` always equals the sum of every bucket. Two extra rules keep look-alike UDP out of the stream list: packets to or from ports of other well-known protocols (DNS 53, NetBIOS 137/138, DHCP, NTP, ...) are never RTP, and at the end a stream is kept only if it showed two packets with consecutive sequence numbers (RFC 3550 A.1 "probation", MIN_SEQUENTIAL = 2). Packets of dropped streams move from `rtp` to `non_rtp_udp` and are counted in `rtp_unconfirmed`, so the totals still add up.
 
 **Questions**
 - *Why count rather than print warnings?* Counters show up in the report and tests; you can see where every packet went.
+- *Why judge a stream at the end instead of dropping its first packets until it is confirmed?* Then no early packet of a real stream is lost from its loss and jitter numbers, and there is no buffering of unconfirmed packets.
+- *Why a port list as well as the sequence check?* A NetBIOS client that increments its transaction id can look sequential, and the port list is cheap and mirrors how Wireshark lets a port-assigned dissector win. The cost is that RTP on those ports is missed.
+- *What stops a flood of random UDP from using all the memory?* Each distinct (addresses, ports, SSRC) is a stream, so the number of streams is capped at 100,000 and a stream costs a couple hundred bytes.
 
 ## pcap_writer (`src/pcap_writer.*`)
 
-**How it works.** Serialises RTP, wraps it in UDP/IPv4 (with a correct IP checksum) and Ethernet or SLL, optionally with a VLAN tag, and writes pcap files in either byte order and resolution.
+**How it works.** Serialises RTP, wraps it in UDP/IPv4 (with a correct IP checksum) and Ethernet, SLL or loopback framing, optionally with a VLAN tag, and writes pcap files in either byte order and resolution.
 
 **Questions**
 - *Why write it yourself?* Test data produced by independent code (a writer) checks the reader; it is also the basis of `rtp_gen`.
@@ -113,7 +116,7 @@ Data flow:
 
 ## seq_tracker (`src/seq_tracker.*`)
 
-**How it works.** Implements RFC 3550 Appendix A.1. `udelta = (uint16)(seq - max_seq)` is the forward distance mod 65536. Small forward steps (< 3000) are in-order (a gap means lost packets, and `seq < max_seq` means the counter wrapped so `cycles++`). A step that lands just *behind* the max (within 100) is late or duplicate. Anything else is a suspicious jump: it is rejected unless the very next packet continues from it (then the source restarted). A 65536-bit "seen" ring distinguishes duplicates from reordered packets. `expected = ext_highest - base + 1`; `lost = expected - unique received`.
+**How it works.** Implements RFC 3550 Appendix A.1. `udelta = (uint16)(seq - max_seq)` is the forward distance mod 65536. Small forward steps (< 3000) are in-order (a gap means lost packets, and `seq < max_seq` means the counter wrapped so `cycles++`). A step that lands just *behind* the max (within 100) is late or duplicate. Anything else is a suspicious jump: it is rejected unless the very next packet continues from it (then the source restarted). A 256-bit "seen" ring (a packet is at most 100 behind the max, so 256 slots are plenty) distinguishes duplicates from reordered packets. `expected = ext_highest - base + 1`; `lost = expected - unique received`.
 
 **Questions an interviewer might ask**
 - *Why does the sequence number need an extended 32-bit (here 64-bit) counter?* The field is 16 bits and wraps after 65536 packets, about 22 minutes at 50 packets/s. Without counting wraps you cannot compute "packets expected", so loss over a long call is wrong. RFC 3550 keeps `cycles` in the high 16 bits.
@@ -267,13 +270,19 @@ Data flow:
 
 **Questions**
 - *Why the median?* One slow run (cache, scheduler noise) must not skew the result; the median ignores outliers.
-- *Why is memory flat?* Records are streamed through one buffer, and per-stream state is a few KB (an 8 KB duplicate ring).
+- *Why is memory flat?* Records are streamed through one buffer, and per-stream state is a couple hundred bytes (the duplicate ring is 256 bits).
 - *What does it not measure?* Disk speed (the capture is in the page cache) and anything on bare metal (it ran under WSL2).
 
-## Wireshark cross-check (`scripts/crosscheck_tshark.sh`)
+## Wireshark cross-check (`scripts/crosscheck_tshark.sh`, `scripts/crosscheck_pcap.py`)
 
 **How it works.** Same generated files through `tshark -z rtp,streams` and `rtp_scope --json`; packets, lost and mean/max jitter printed side by side.
 
 **Questions**
 - *Why do they differ on duplicates?* Wireshark includes duplicates in the jitter estimate; rtp_scope does not (documented in `stream_stats`).
 - *Why does tshark show 0 jitter for payload type 111?* Dynamic payload types have no fixed clock rate without SDP.
+
+**Real captures.** `scripts/crosscheck_pcap.py` does the same comparison per stream on any pcap (pairing streams by addresses, ports and SSRC, and listing streams only one tool found). On three public captures both tools found the same 4 streams with identical packets and loss; the one unexplained difference is tshark's mean jitter on an H.263 video stream, where several packets share one RTP timestamp.
+
+**Questions**
+- *What did real captures teach you that generated traffic could not?* That RTP detection needs more than the header check (see `analyzer`), and that a link type I had never generated (BSD loopback) shows up in practice.
+- *Why can't you explain the H.263 difference?* The per-packet jitter is right (the max matches to three decimals); only the averaging differs, and I could not reproduce tshark's mean with several plausible formulas. I would rather say that than guess.
