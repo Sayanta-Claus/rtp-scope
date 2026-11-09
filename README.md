@@ -11,7 +11,7 @@ It has two tools:
 - `rtp_scope` reads a `.pcap`, finds the RTP streams and reports loss, duplicates, reordering and jitter (text or JSON). It can also replay a stream through a fixed and an adaptive jitter buffer.
 - `rtp_gen` makes synthetic RTP captures (loss, jitter, reordering, duplicates, sequence wraparound) and writes a ground-truth file with the exact counts, so the analyzer can be checked against known answers.
 
-I wrote it to learn RTP from the bytes up. Headers are parsed by hand, byte by byte, with every read bounds-checked. Only the standard library is used. A walkthrough of each module with likely interview questions is in [docs/MODULES.md](docs/MODULES.md).
+I wrote it to learn RTP from the bytes up. Headers are parsed by hand, byte by byte, with every read bounds-checked. Only the standard library is used.
 
 ## Build
 
