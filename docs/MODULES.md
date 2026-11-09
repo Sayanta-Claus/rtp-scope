@@ -89,9 +89,9 @@ Plain-English tour of every module, with the questions an interviewer is likely 
 
 ---
 
-# Milestone 2: statistics modules
+# Statistics modules
 
-Data flow added in this milestone:
+Data flow:
 
 ```
  RtpHeader + arrival time
@@ -164,7 +164,7 @@ Data flow added in this milestone:
 
 ---
 
-# Milestone 3: traffic generator
+# Traffic generator
 
 ```
  GenConfig (seed, loss, jitter, reorder, dup, wrap...)
@@ -202,7 +202,7 @@ Data flow added in this milestone:
 
 ---
 
-# Milestone 4: jitter-buffer simulator
+# Jitter-buffer simulator
 
 ```
  StreamStats.arrivals --> make_trace --> PlayoutTrace --+--> simulate_fixed    --> SimResult --+--> table (--simulate)
@@ -224,7 +224,7 @@ Data flow added in this milestone:
 
 ---
 
-# Milestones 5 and 6: tests, robustness, benchmark, cross-check
+# Tests, robustness, benchmark, cross-check
 
 ```
  tests/ (ctest)                        scripts/

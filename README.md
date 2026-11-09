@@ -204,3 +204,7 @@ scripts/  validate, fuzz, bench, sweep + plot, tshark comparison, demo
 results/  saved output of the commands above
 docs/     MODULES.md
 ```
+
+## License
+
+MIT, see [LICENSE](LICENSE).
