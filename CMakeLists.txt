@@ -69,3 +69,10 @@ foreach(t ${TEST_NAMES})
   target_link_libraries(${t} PRIVATE rtpscope_core)
   add_test(NAME ${t} COMMAND ${t})
 endforeach()
+
+# Black-box test of the real executables (needs bash).
+find_program(BASH_PROGRAM bash)
+if(BASH_PROGRAM)
+  add_test(NAME cli_smoke
+           COMMAND ${BASH_PROGRAM} ${CMAKE_SOURCE_DIR}/tests/cli_smoke.sh ${CMAKE_BINARY_DIR})
+endif()
