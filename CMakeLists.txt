@@ -34,6 +34,8 @@ set(CORE_SOURCES
   src/stream_stats.cpp
   src/report.cpp
   src/pcap_writer.cpp
+  src/traffic_model.cpp
+  src/trace_gen.cpp
 )
 
 add_library(rtpscope_core STATIC ${CORE_SOURCES})
@@ -42,6 +44,9 @@ target_link_libraries(rtpscope_core PUBLIC rtpscope_warnings)
 
 add_executable(rtp_scope tools/rtp_scope.cpp)
 target_link_libraries(rtp_scope PRIVATE rtpscope_core)
+
+add_executable(rtp_gen tools/rtp_gen.cpp)
+target_link_libraries(rtp_gen PRIVATE rtpscope_core)
 
 # ---- tests ----
 enable_testing()
@@ -54,6 +59,8 @@ set(TEST_NAMES
   test_jitter
   test_stats
   test_report
+  test_traffic
+  test_e2e
 )
 foreach(t ${TEST_NAMES})
   add_executable(${t} tests/${t}.cpp)

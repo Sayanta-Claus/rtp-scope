@@ -162,3 +162,41 @@ Data flow added in this milestone:
 
 **Questions**
 - *Why not `atoi`?* It returns 0 for garbage and ignores trailing text, hiding command-line typos.
+
+---
+
+# Milestone 3: traffic generator
+
+```
+ GenConfig (seed, loss, jitter, reorder, dup, wrap...)
+      |
+      v
+ +---------------+  arrivals   +--------------+  frames  +-------------+
+ | trace_gen     | ----------> | pcap_writer  | -------> | out.pcap    |
+ | (sender+net)  |             +--------------+          +-------------+
+ |      |        |  GroundTruth                           (analyzer reads it back)
+ +------+--------+------------> out.pcap.truth  (key=value)
+        ^
+        | numbers
+ +---------------+
+ | traffic_model |  xoshiro256** + uniform/normal
+ +---------------+
+```
+
+## traffic_model (`src/traffic_model.*`)
+
+**How it works.** xoshiro256** is seeded through splitmix64. `uniform()` takes the top 53 bits of a 64-bit output; `normal()` is Box-Muller. Loss, delay, reorder and duplicate decisions each get their own independent stream of the same seed.
+
+**Questions**
+- *Why not `std::normal_distribution`?* The standard fixes engines but not distributions, so the same seed gives different numbers on libstdc++ vs libc++. Ours is identical everywhere, so published results are reproducible.
+- *Why separate streams per effect?* Changing `--loss` must not silently change the jitter values for the same seed.
+
+## trace_gen (`src/trace_gen.*`) and rtp_gen (`tools/rtp_gen.cpp`)
+
+**How it works.** (1) The sender emits packet n at `n*interval` with `seq = start + n` and a timestamp from the clock rate. (2) Each packet is dropped with probability `loss`. (3) Delivered packets get `base + jitter` delay but the path is FIFO, so jitter alone never reorders. (4) With probability `reorder`, a packet swaps places with the next delivered one (arrival *times* stay in place so the capture stays time-ordered). (5) With probability `duplicate`, an identical copy follows. Every step is counted into `GroundTruth`.
+
+**Questions**
+- *How do you know your analyzer is right?* The generator is an independent oracle: it knows exactly how many packets it dropped, duplicated and reordered. The end-to-end test and `scripts/validate.sh` require exact agreement.
+- *What does "reordered" mean here?* One reordered packet = one packet that arrives after a packet with a higher sequence number; with adjacent swaps that is exactly one per swap, and it is what a receiver can observe.
+- *Why is "lost" the observable loss?* A receiver cannot know about packets dropped before the first or after the last delivered one, so `packets_lost` counts drops between the lowest and highest delivered packet (the truth file also has `packets_dropped` for everything).
+- *Why `--wrap`?* Starting at 65500 makes the 16-bit sequence number wrap after 36 packets, exercising the extended-sequence logic.
