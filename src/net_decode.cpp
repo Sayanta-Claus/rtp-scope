@@ -40,6 +40,15 @@ bool is_vlan_tag(uint16_t ethertype) {
 // Reads the link-layer header and leaves the reader at the start of the
 // network-layer payload. Returns false if the header is truncated.
 bool parse_link(uint32_t link_type, ByteReader& r, uint16_t& ethertype) {
+    if (link_type == 0) {
+        // BSD loopback: a 4-byte address family in the capturing host's byte
+        // order (AF_INET = 2), so accept 2 in either order. Anything else (IPv6
+        // has several values) is "not IPv4".
+        uint32_t family = 0;
+        if (!r.read_u32(Endian::Little, family)) return false;
+        ethertype = (family == 2 || family == 0x02000000u) ? kEthertypeIpv4 : 0;
+        return true;
+    }
     if (link_type == 113) {
         // SLL: packet_type(2) arphrd(2) addr_len(2) addr(8) protocol(2)
         return r.skip(14) && r.read_u16(Endian::Big, ethertype);

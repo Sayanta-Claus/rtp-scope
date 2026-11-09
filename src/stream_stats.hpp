@@ -96,6 +96,11 @@ public:
     double jitter_mean_ms() const { return JitterEstimator::to_ms(jitter_.mean_units(), clock_rate_); }
     double jitter_max_ms() const { return JitterEstimator::to_ms(jitter_.max_units(), clock_rate_); }
 
+    // RFC 3550 A.1 "probation": a source is believed once two packets with
+    // consecutive sequence numbers (MIN_SEQUENTIAL = 2) have been seen. Random
+    // UDP that merely resembles an RTP header almost never does that.
+    bool confirmed() const { return sequential_pairs_ > 0; }
+
     uint64_t first_arrival_ns() const { return first_ns_; }
     const std::vector<Arrival>& arrivals() const { return arrivals_; }
 
@@ -110,6 +115,9 @@ private:
     uint64_t bytes_ = 0;
     uint64_t first_ns_ = 0;
     uint64_t last_ns_ = 0;
+    bool has_last_seq_ = false;
+    uint16_t last_seq_ = 0;
+    uint64_t sequential_pairs_ = 0;  // arrivals whose seq was exactly previous + 1
     SeqTracker seq_;
     JitterEstimator jitter_;
     std::vector<Arrival> arrivals_;

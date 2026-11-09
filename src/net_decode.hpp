@@ -12,6 +12,7 @@
 //   * Ethernet II: dst(6) src(6) ethertype(2). 802.1Q (0x8100) and 802.1ad
 //     (0x88a8, 0x9100) insert a 4-byte tag: TCI(2) + the real ethertype(2).
 //     Tags can stack (QinQ), so we loop.
+//   * BSD loopback (link type 0): a 4-byte address family, then the IP packet.
 //   * Linux cooked v1 (SLL, link type 113): a fixed 16-byte pseudo header whose
 //     last two bytes are the ethertype.
 //   * IPv4: the header length is IHL*4 (IHL is the low nibble, in 32-bit

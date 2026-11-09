@@ -28,6 +28,10 @@ void StreamStats::add_packet(uint64_t arrival_ns, const RtpHeader& h, size_t rtp
     bytes_ += rtp_bytes;
     if (h.payload_type != payload_type_) payload_type_changed_ = true;
 
+    if (has_last_seq_ && h.sequence == static_cast<uint16_t>(last_seq_ + 1)) ++sequential_pairs_;
+    has_last_seq_ = true;
+    last_seq_ = h.sequence;
+
     const SeqResult r = seq_.update(h.sequence);
     const bool counted = r.kind != SeqKind::Duplicate && r.kind != SeqKind::Rejected;
     if (counted) jitter_.update(arrival_ns, h.timestamp, clock_rate_);

@@ -76,6 +76,8 @@ TEST(streams_are_separated_by_ssrc_and_by_ports) {
     f.emplace_back(1, rtp_frame(1, 0, 0xbbbb));              // same ports, other SSRC
     f.emplace_back(2, rtp_frame(1, 0, 0xaaaa, other_port));  // same SSRC, other source port
     f.emplace_back(3, rtp_frame(2, 160, 0xaaaa));
+    f.emplace_back(4, rtp_frame(2, 160, 0xbbbb));              // second packets, so every
+    f.emplace_back(5, rtp_frame(2, 160, 0xaaaa, other_port));  // stream is confirmed
     const auto a = analyze(f);
     CHECK_EQ(a.streams().size(), 3u);
     CHECK_EQ(a.streams()[0]->packets(), 2u);  // first-seen order
@@ -83,14 +85,19 @@ TEST(streams_are_separated_by_ssrc_and_by_ports) {
 }
 
 TEST(clock_rate_defaults_and_override) {
-    auto frame_with_pt = [](uint8_t pt) {
+    auto frame_with_pt = [](uint8_t pt, uint16_t seq) {
         RtpPacketSpec rs;
         rs.payload_type = pt;
         rs.ssrc = pt;
+        rs.sequence = seq;
         return rtpscope::build_udp_frame(FrameSpec(), rtpscope::build_rtp_packet(rs));
     };
-    Frames f = {{0, frame_with_pt(0)}, {1, frame_with_pt(8)}, {2, frame_with_pt(9)},
-                {3, frame_with_pt(111)}, {4, frame_with_pt(96)}, {5, frame_with_pt(34)}};
+    Frames f;
+    uint64_t t = 0;
+    for (uint8_t pt : {0, 8, 9, 111, 96, 34}) {  // two consecutive packets each => confirmed streams
+        f.emplace_back(t++, frame_with_pt(pt, 1));
+    }
+    for (uint8_t pt : {0, 8, 9, 111, 96, 34}) f.emplace_back(t++, frame_with_pt(pt, 2));
     rtpscope::ClockRates rates;
     std::string err;
     CHECK(rates.add_override("96=90000", err));
@@ -126,6 +133,7 @@ TEST(jitter_in_ms_uses_the_stream_clock_rate) {
 TEST(every_frame_lands_in_exactly_one_bucket) {
     Frames f;
     f.emplace_back(0, rtp_frame(1));                                  // RTP
+    f.emplace_back(5, rtp_frame(2));                                  // RTP (2nd, confirms the stream)
     auto rtcp = rtpscope::build_udp_frame(FrameSpec(), {0x80, 200, 0, 1, 0, 0, 0, 1});
     f.emplace_back(1, rtcp);                                          // RTCP
     f.emplace_back(2, rtpscope::build_udp_frame(FrameSpec(), {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}));  // other UDP
@@ -136,8 +144,8 @@ TEST(every_frame_lands_in_exactly_one_bucket) {
     f.emplace_back(4, std::vector<uint8_t>(5, 0));                    // malformed
     const auto a = analyze(f);
     const auto& c = a.counters();
-    CHECK_EQ(c.frames, 5u);
-    CHECK_EQ(c.rtp, 1u);
+    CHECK_EQ(c.frames, 6u);
+    CHECK_EQ(c.rtp, 2u);
     CHECK_EQ(c.rtcp, 1u);
     CHECK_EQ(c.non_rtp_udp, 1u);
     CHECK_EQ(c.non_ipv4, 1u);

@@ -49,6 +49,7 @@ struct FrameSpec {
     bool vlan = false;             // insert an 802.1Q tag
     uint16_t vlan_id = 100;
     bool sll = false;              // Linux cooked header instead of Ethernet
+    bool loopback = false;         // BSD loopback header (link type 0) instead of Ethernet
 };
 
 std::vector<uint8_t> build_udp_frame(const FrameSpec& spec, const std::vector<uint8_t>& udp_payload);

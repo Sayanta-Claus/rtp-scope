@@ -36,9 +36,9 @@ TEST(vlan_tagged_frame_is_decoded) {
     // Through the whole analyzer too.
     rtpscope::Analyzer a;
     std::string err;
-    std::istringstream in(make_pcap({{0, f}}), std::ios::binary);
+    std::istringstream in(make_pcap({{0, f}, {1, rtp_frame(6, 0, 1, fs)}}), std::ios::binary);
     CHECK(a.analyze(in, err));
-    CHECK_EQ(a.counters().rtp, 1u);
+    CHECK_EQ(a.counters().rtp, 2u);
 }
 
 TEST(stacked_qinq_tags_are_skipped) {
@@ -78,10 +78,10 @@ TEST(fragments_are_skipped_and_counted) {
 
     rtpscope::Analyzer a;
     std::string err;
-    std::istringstream in(make_pcap({{0, first}, {1, later}, {2, rtp_frame(2)}}), std::ios::binary);
+    std::istringstream in(make_pcap({{0, first}, {1, later}, {2, rtp_frame(2)}, {3, rtp_frame(3)}}), std::ios::binary);
     CHECK(a.analyze(in, err));
     CHECK_EQ(a.counters().fragments, 2u);
-    CHECK_EQ(a.counters().rtp, 1u);
+    CHECK_EQ(a.counters().rtp, 2u);
 }
 
 TEST(non_ipv4_and_non_udp_are_not_malformed) {

@@ -45,6 +45,7 @@ bool read_exact(std::istream& in, uint8_t* dst, size_t n) {
 
 const char* link_type_name(uint32_t link_type) {
     switch (link_type) {
+        case kLinkLoopback: return "BSD loopback";
         case kLinkEthernet: return "Ethernet";
         case kLinkLinuxSll: return "Linux cooked (SLL)";
         default: return "unsupported";
@@ -91,9 +92,9 @@ bool PcapReader::read_header(std::string& error) {
     // The top bits of the field carry FCS/other flags in newer libpcap; the
     // link type itself is the low 28 bits.
     link_type_ = network & 0x0fffffffu;
-    if (link_type_ != kLinkEthernet && link_type_ != kLinkLinuxSll) {
+    if (link_type_ != kLinkLoopback && link_type_ != kLinkEthernet && link_type_ != kLinkLinuxSll) {
         error = "unsupported link type " + std::to_string(link_type_) +
-                " (supported: 1 = Ethernet, 113 = Linux cooked SLL)";
+                " (supported: 0 = loopback, 1 = Ethernet, 113 = Linux cooked SLL)";
         return false;
     }
     return true;

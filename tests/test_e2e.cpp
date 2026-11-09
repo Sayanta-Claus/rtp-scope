@@ -24,12 +24,22 @@ void check_against_truth(const GenConfig& c) {
     Analyzer a;
     std::string err;
     CHECK(a.analyze(in, err));
-    CHECK_EQ(a.counters().rtp, t.received);
     CHECK_EQ(a.counters().malformed(), 0u);
-    if (t.received == 0) {
+
+    // A stream is only reported once two consecutive sequence numbers have
+    // arrived back to back (RFC 3550 A.1 probation). Without such a pair the
+    // packets are counted as non-RTP, not as a stream.
+    bool confirmed = false;
+    for (size_t i = 1; i < arr.size(); ++i) {
+        if (arr[i].sequence == static_cast<uint16_t>(arr[i - 1].sequence + 1)) confirmed = true;
+    }
+    if (!confirmed) {
         CHECK_EQ(a.streams().size(), 0u);
+        CHECK_EQ(a.counters().rtp, 0u);
+        CHECK_EQ(a.counters().non_rtp_udp, t.received);
         return;
     }
+    CHECK_EQ(a.counters().rtp, t.received);
     CHECK_EQ(a.streams().size(), 1u);
     const StreamStats& s = *a.streams()[0];
     CHECK_EQ(s.packets(), t.received);

@@ -32,9 +32,10 @@ namespace rtpscope {
 
 struct Counters {
     uint64_t frames = 0;         // pcap records read
-    uint64_t rtp = 0;            // classified as RTP
+    uint64_t rtp = 0;            // RTP packets in confirmed streams
     uint64_t rtcp = 0;           // RTCP (types 200-204), counted only
-    uint64_t non_rtp_udp = 0;    // UDP that does not look like RTP
+    uint64_t non_rtp_udp = 0;    // UDP that is not RTP (includes rtp_unconfirmed)
+    uint64_t rtp_unconfirmed = 0;  // looked like RTP but its stream never showed consecutive sequence numbers
     uint64_t non_ipv4 = 0;       // ARP, IPv6, ...
     uint64_t non_udp = 0;        // IPv4 but TCP/ICMP/...
     uint64_t fragments = 0;      // IPv4 fragments skipped
@@ -42,6 +43,7 @@ struct Counters {
     uint64_t malformed_rtp = 0;  // looked like RTP but CSRC/ext/padding do not fit
     bool capture_truncated = false;  // file ended in the middle of a record
     bool capture_corrupt = false;    // implausible record length, stopped early
+    bool streams_capped = false;     // too many distinct streams; the rest were counted as non-RTP
 
     uint64_t malformed() const { return malformed_net + malformed_rtp; }
 };
@@ -67,7 +69,8 @@ public:
 
 private:
     void handle_record(const PcapRecord& record);
-    void handle_rtp(uint64_t timestamp_ns, const UdpDatagram& udp, const RtpHeader& header);
+    bool handle_rtp(uint64_t timestamp_ns, const UdpDatagram& udp, const RtpHeader& header);
+    void drop_unconfirmed_streams();
 
     ClockRates rates_;
     bool keep_arrivals_;

@@ -23,19 +23,22 @@
 //     first such packet is rejected.
 //
 // Design decisions that differ from / extend the RFC:
-//   * Duplicates are detected with a 65536-bit "seen" ring indexed by seq16
-//     (A.1 itself cannot tell a duplicate from a reordered packet). Bits ahead
+//   * Duplicates are detected with a 256-bit "seen" ring indexed by seq16 mod 256
+//     (A.1 itself cannot tell a duplicate from a reordered packet). A packet is
+//     at most MAX_MISORDER (100) behind the highest number, so 256 slots are
+//     enough, and a stream costs 32 bytes instead of 8 KB. Bits ahead
 //     of max_seq are cleared as it advances, so stale entries never survive a
 //     wrap.
 //   * A restart (resync) starts a new "epoch". Totals from the old epoch are
 //     folded into acc_expected_/acc_received_, so loss stays cumulative.
-//   * We omit A.1's initial "probation" (MIN_SEQUENTIAL): streams are already
-//     keyed by SSRC, and probation would discard real first packets, which
-//     would make exact ground-truth comparison harder.
+//   * A.1's "probation" (MIN_SEQUENTIAL) is not done here: the tracker counts
+//     every packet from the first. Whether a stream is real is decided at the
+//     end by StreamStats::confirmed() (two consecutive sequence numbers seen),
+//     so no early packets are lost from the totals.
 #pragma once
 
 #include <cstdint>
-#include <vector>
+#include <bitset>
 
 namespace rtpscope {
 
@@ -59,7 +62,7 @@ public:
     static constexpr uint32_t kMaxMisorder = 100;
     static constexpr uint32_t kSeqMod = 1u << 16;
 
-    SeqTracker() : seen_(kSeqMod, false) {}
+    SeqTracker() = default;
 
     SeqResult update(uint16_t seq);
 
@@ -78,7 +81,9 @@ public:
 private:
     void start_epoch(uint16_t seq);
 
-    std::vector<bool> seen_;
+    // Which of the most recent kRing sequence numbers have been seen, indexed by seq & (kRing - 1).
+    static constexpr uint32_t kRing = 256;  // must exceed kMaxMisorder
+    std::bitset<kRing> seen_;
     bool started_ = false;
     uint16_t max_seq_ = 0;
     int64_t cycles_ = 0;

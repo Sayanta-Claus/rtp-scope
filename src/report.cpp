@@ -64,13 +64,18 @@ void print_text(std::ostream& out, const std::string& file, const Analyzer& a) {
                a.link_type(), resolution(a));
     out << fmt("  frames in capture  : %llu\n", u(c.frames));
     out << fmt("  RTP / RTCP         : %llu / %llu\n", u(c.rtp), u(c.rtcp));
-    out << fmt("  non-RTP UDP        : %llu\n", u(c.non_rtp_udp));
+    out << fmt("  non-RTP UDP        : %llu", u(c.non_rtp_udp));
+    if (c.rtp_unconfirmed > 0) {
+        out << fmt(" (%llu looked like RTP but never showed consecutive sequence numbers)", u(c.rtp_unconfirmed));
+    }
+    out << "\n";
     out << fmt("  non-IPv4 / non-UDP : %llu / %llu\n", u(c.non_ipv4), u(c.non_udp));
     out << fmt("  IPv4 fragments     : %llu (skipped)\n", u(c.fragments));
     out << fmt("  malformed          : %llu (network %llu, rtp %llu)\n", u(c.malformed()),
                u(c.malformed_net), u(c.malformed_rtp));
     if (c.capture_truncated) out << "  warning: capture ends in the middle of a record (truncated file)\n";
     if (c.capture_corrupt) out << "  warning: implausible record length; stopped reading early\n";
+    if (c.streams_capped) out << "  warning: too many distinct streams; the rest were counted as non-RTP\n";
 
     const auto& streams = a.streams();
     out << "\nstreams: " << streams.size() << "\n";
@@ -141,13 +146,15 @@ void print_json(std::ostream& out, const std::string& file, const Analyzer& a) {
     out << fmt("    \"rtp\": %llu,\n", u(c.rtp));
     out << fmt("    \"rtcp\": %llu,\n", u(c.rtcp));
     out << fmt("    \"non_rtp_udp\": %llu,\n", u(c.non_rtp_udp));
+    out << fmt("    \"rtp_like_unconfirmed\": %llu,\n", u(c.rtp_unconfirmed));
     out << fmt("    \"non_ipv4\": %llu,\n", u(c.non_ipv4));
     out << fmt("    \"non_udp\": %llu,\n", u(c.non_udp));
     out << fmt("    \"ipv4_fragments_skipped\": %llu,\n", u(c.fragments));
     out << fmt("    \"malformed_network\": %llu,\n", u(c.malformed_net));
     out << fmt("    \"malformed_rtp\": %llu,\n", u(c.malformed_rtp));
     out << fmt("    \"capture_truncated\": %s,\n", c.capture_truncated ? "true" : "false");
-    out << fmt("    \"capture_corrupt\": %s\n", c.capture_corrupt ? "true" : "false");
+    out << fmt("    \"capture_corrupt\": %s,\n", c.capture_corrupt ? "true" : "false");
+    out << fmt("    \"streams_capped\": %s\n", c.streams_capped ? "true" : "false");
     out << "  },\n";
     out << "  \"streams\": [";
     bool first = true;

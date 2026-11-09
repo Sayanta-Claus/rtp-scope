@@ -64,7 +64,12 @@ std::vector<uint8_t> build_rtp_packet(const RtpPacketSpec& s) {
 
 std::vector<uint8_t> build_udp_frame(const FrameSpec& s, const std::vector<uint8_t>& udp_payload) {
     std::vector<uint8_t> f;
-    if (s.sll) {
+    if (s.loopback) {
+        put8(f, 2);  // AF_INET, little-endian host
+        put8(f, 0);
+        put8(f, 0);
+        put8(f, 0);
+    } else if (s.sll) {
         put16(f, 0);       // packet type: unicast to us
         put16(f, 1);       // ARPHRD_ETHER
         put16(f, 6);       // address length

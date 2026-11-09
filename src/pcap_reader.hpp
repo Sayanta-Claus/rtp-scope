@@ -14,7 +14,8 @@
 //     magic in *its own* byte order, so reading it as big-endian gives
 //       a1b2c3d4 / a1b23c4d -> file is big-endian    (us / ns)
 //       d4c3b2a1 / 4d3cb2a1 -> file is little-endian (us / ns)
-//   * Only link types 1 (Ethernet) and 113 (Linux cooked v1) are accepted;
+//   * Only link types 0 (BSD loopback), 1 (Ethernet) and 113 (Linux cooked v1)
+//     are accepted;
 //     everything else is rejected with a clear message (we cannot find IP
 //     without knowing the link layer).
 //
@@ -33,6 +34,7 @@
 
 namespace rtpscope {
 
+constexpr uint32_t kLinkLoopback = 0;  // BSD loopback / "NULL": 4-byte address family, then IP
 constexpr uint32_t kLinkEthernet = 1;
 constexpr uint32_t kLinkLinuxSll = 113;
 

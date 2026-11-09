@@ -24,7 +24,8 @@ TEST(format_ipv4_is_dotted_quad) {
 
 namespace {
 rtpscope::Analyzer small_capture() {
-    std::istringstream in(make_pcap({{0, rtp_frame(1, 0)}, {20000000, rtp_frame(3, 320)}}), std::ios::binary);
+    std::istringstream in(make_pcap({{0, rtp_frame(1, 0)}, {20000000, rtp_frame(2, 160)}, {60000000, rtp_frame(4, 480)}}),
+                          std::ios::binary);
     rtpscope::Analyzer a;
     std::string err;
     a.analyze(in, err);
@@ -39,7 +40,7 @@ TEST(json_output_contains_expected_fields_and_escapes_the_file_name) {
     const std::string j = os.str();
     CHECK(j.find("\"file\": \"we\\\"ird\\\\name.pcap\"") != std::string::npos);
     CHECK(j.find("\"source\": \"10.0.0.1:5004\"") != std::string::npos);
-    CHECK(j.find("\"expected\": 3,") != std::string::npos);
+    CHECK(j.find("\"expected\": 4,") != std::string::npos);
     CHECK(j.find("\"lost\": 1,") != std::string::npos);
     CHECK(j.find("\"clock_rate\": 8000,") != std::string::npos);
     int depth = 0;
@@ -65,7 +66,7 @@ TEST(text_report_mentions_streams_and_loss) {
     CHECK(t.find("streams: 1") != std::string::npos);
     CHECK(t.find("10.0.0.1:5004") != std::string::npos);
     CHECK(t.find("0 PCMU") != std::string::npos);
-    CHECK(t.find("33.33") != std::string::npos);  // 1 of 3 lost
+    CHECK(t.find("25.00") != std::string::npos);  // 1 of 4 lost
 }
 
 TEST_MAIN()

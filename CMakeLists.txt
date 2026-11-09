@@ -68,6 +68,7 @@ set(TEST_NAMES
   test_e2e
   test_jitter_buffer
   test_mutation
+  test_real_world
 )
 foreach(t ${TEST_NAMES})
   add_executable(${t} tests/${t}.cpp)

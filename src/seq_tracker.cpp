@@ -29,8 +29,8 @@ void SeqTracker::start_epoch(uint16_t seq) {
     base_ = seq;
     bad_seq_ = -1;
     epoch_received_ = 1;
-    seen_.assign(kSeqMod, false);
-    seen_[seq] = true;
+    seen_.reset();
+    seen_.set(seq % kRing);
 }
 
 uint64_t SeqTracker::expected() const {
@@ -56,11 +56,14 @@ SeqResult SeqTracker::update(uint16_t seq) {
         // 16-bit counter wrapped.
         if (seq < max_seq_) ++cycles_;
         // Forget stale "seen" bits for the numbers we are skipping over, so a
-        // number reused after a wrap is not mistaken for a duplicate.
-        for (uint32_t k = 1; k < udelta; ++k) {
-            seen_[static_cast<uint16_t>(max_seq_ + k)] = false;
+        // number reused later is not mistaken for a duplicate. A jump of a
+        // whole ring or more invalidates every slot.
+        if (udelta >= kRing) {
+            seen_.reset();
+        } else {
+            for (uint32_t k = 1; k < udelta; ++k) seen_.reset((max_seq_ + k) % kRing);
         }
-        seen_[seq] = true;
+        seen_.set(seq % kRing);
         max_seq_ = seq;
         ++epoch_received_;
         bad_seq_ = -1;
@@ -83,11 +86,11 @@ SeqResult SeqTracker::update(uint16_t seq) {
     // Slightly behind the highest number: a late or duplicated packet.
     const int64_t behind = static_cast<int64_t>(kSeqMod) - udelta;  // 1..kMaxMisorder
     const int64_t ext = extended_highest() - behind;
-    if (seen_[seq]) {
+    if (seen_.test(seq % kRing)) {
         ++duplicates_;
         return {SeqKind::Duplicate, ext};
     }
-    seen_[seq] = true;
+    seen_.set(seq % kRing);
     ++epoch_received_;
     ++out_of_order_;
     if (ext < base_) base_ = ext;  // arrived before anything we had seen
