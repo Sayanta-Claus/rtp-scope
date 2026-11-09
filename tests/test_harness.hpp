@@ -10,7 +10,7 @@
 // Where it sits: each tests/test_*.cpp includes this and links rtpscope_core.
 //
 // Design decision:
-//   Tests must be easy to read in an interview, so the harness is tiny and
+//   Tests should be easy to read, so the harness is tiny and
 //   has no macros beyond the four below.
 #pragma once
 

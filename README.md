@@ -119,7 +119,7 @@ Median of 5 runs on 1,000,000 generated packets (991,859 in the file after 1% lo
 
 Peak memory was 4,756 kB. The file sits in the page cache, so this is CPU speed, not disk. Parse-only and parse + analysis are within noise of each other.
 
-This laptop is not a steady benchmark machine: an earlier session measured about 11M packets/sec for what was then the same parsing code. I built the previous commit next to the current one and ran both back to back; they came out the same (6-7M packets/sec at that moment), so the change is the machine, not the code. Treat the numbers as the right order of magnitude, not as exact. WSL2 also means bare-metal numbers will differ.
+Speed on this laptop varies a lot between sessions (an earlier run of the same parsing code measured about 11M packets/sec; I checked the previous commit against the current one back to back and they matched), so read these as an order of magnitude. WSL2 also means bare-metal numbers will differ.
 
 ### Robustness
 
@@ -129,7 +129,7 @@ scripts/fuzz.sh --bin build-san --count 1000 | tee results/robustness.txt
 build-san/test_mutation
 ```
 
-1000 corrupted captures (bit flips, truncation, overwritten bytes, extreme field values; fixed seeds) were run through `rtp_scope` built with the sanitizers: 809 analysed, 191 rejected with an error, no crashes, hangs or sanitizer reports. (`--simulate` exits with an error when a damaged file has no usable stream, which is most of the rejections.) `test_mutation` does 3000 more in-process (2649 analysed, 351 rejected), also clean. This is random mutation with fixed seeds, not coverage-guided fuzzing.
+1000 corrupted captures (bit flips, truncation, overwritten bytes, extreme field values; fixed seeds) were run through `rtp_scope` built with the sanitizers: 809 analysed, 191 rejected with an error, no crashes, hangs or sanitizer reports. (`--simulate` also exits with an error when a damaged file has no usable stream.) `test_mutation` does 3000 more in-process (2649 analysed, 351 rejected), also clean. This is random mutation with fixed seeds, not coverage-guided fuzzing.
 
 ### Real captures
 

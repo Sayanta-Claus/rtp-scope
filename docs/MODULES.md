@@ -1,6 +1,6 @@
 # rtp-scope: module guide
 
-Plain-English tour of every module, with the questions an interviewer is likely to ask.
+Plain-English tour of every module, with the questions each design choice tends to raise.
 
 ## Data flow
 
@@ -31,7 +31,7 @@ Plain-English tour of every module, with the questions an interviewer is likely 
 
 **Why not cast to a struct?** A `reinterpret_cast<Header*>(buf)` is undefined behaviour (alignment, strict aliasing), depends on struct padding and host endianness, and has no bounds check.
 
-**Questions an interviewer might ask**
+**Questions and answers**
 - *Why is network data "big-endian"?* Network byte order is a convention (RFC 1700 era) that every protocol header uses; the pcap file header is the exception: it uses the writer's native order.
 - *What happens on a short read?* It returns false, the caller marks the packet malformed and moves on; there is no exception and no UB.
 
@@ -118,7 +118,7 @@ Data flow:
 
 **How it works.** Implements RFC 3550 Appendix A.1. `udelta = (uint16)(seq - max_seq)` is the forward distance mod 65536. Small forward steps (< 3000) are in-order (a gap means lost packets, and `seq < max_seq` means the counter wrapped so `cycles++`). A step that lands just *behind* the max (within 100) is late or duplicate. Anything else is a suspicious jump: it is rejected unless the very next packet continues from it (then the source restarted). A 256-bit "seen" ring (a packet is at most 100 behind the max, so 256 slots are plenty) distinguishes duplicates from reordered packets. `expected = ext_highest - base + 1`; `lost = expected - unique received`.
 
-**Questions an interviewer might ask**
+**Questions and answers**
 - *Why does the sequence number need an extended 32-bit (here 64-bit) counter?* The field is 16 bits and wraps after 65536 packets, about 22 minutes at 50 packets/s. Without counting wraps you cannot compute "packets expected", so loss over a long call is wrong. RFC 3550 keeps `cycles` in the high 16 bits.
 - *How do you tell a wrap from a reordered packet?* Compare modulo 2^16: a small positive `udelta` is forward (even if the number is numerically smaller), a `udelta` near 65536 is a packet slightly behind.
 - *Why MAX_DROPOUT = 3000 and MAX_MISORDER = 100?* They bound how much loss or reordering we believe before suspecting a restart or a corrupt/foreign packet.
@@ -217,7 +217,7 @@ Data flow:
 
 **How it works.** For each packet, *transit* `n = arrival - media time` (media time comes from the unwrapped RTP timestamp, both measured from the first packet). A buffer with playout delay `D` plays the packet at `media + D`; if `n <= D` it is on time and waits `D - n` in the buffer, otherwise it is late and discarded. Lost = expected minus arrived. **Fixed** uses a constant `D`. **Adaptive** (Ramjee et al. 1994, algorithm 1) keeps an EWMA of the transit `d` and of its deviation `v` and targets `D = d + k*v`; the delay jumps to the target at talkspurt boundaries (marker bit, or a long gap in media time) and otherwise creeps towards it by at most 0.5 ms per packet, so playback never glitches.
 
-**Questions an interviewer might ask**
+**Questions and answers**
 - *What does a jitter buffer trade off?* Latency against late-packet loss: a bigger buffer absorbs more network jitter but delays the audio (interactive calls want under ~150-200 ms end to end). The `--sweep` output draws exactly this curve.
 - *Why adapt only at talkspurt boundaries?* Changing delay in the middle of speech means stretching or squeezing audio (audible). Silence between talkspurts can be lengthened or shortened unnoticed.
 - *Why mean + k * deviation?* If transit were roughly normal, k = 4 covers almost all of the distribution; a larger k means fewer late packets and more latency.
