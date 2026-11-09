@@ -40,7 +40,9 @@ build/rtp_scope --clock-rate 96=90000 video.pcap
 
 `rtp_gen --help` lists the rest (`--start-seq`, `--vlan`, `--sll`, `--nano`, `--big-endian`, talkspurts...). Exit codes: 0 ok, 1 runtime error, 2 bad usage.
 
-Output of `scripts/demo.sh` (recorded in `results/demo.cast`):
+![demo](results/demo.gif)
+
+The same run as text (`scripts/demo.sh`; the recording is `results/demo.cast`, and the GIF was made from it with `agg`):
 
 ```
 $ cat demo.pcap.truth
