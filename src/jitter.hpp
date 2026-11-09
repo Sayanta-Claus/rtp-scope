@@ -34,6 +34,11 @@ public:
     void update(uint64_t arrival_ns, uint32_t rtp_timestamp, uint32_t clock_rate);
 
     double jitter_units() const { return jitter_; }
+    // Statistics of the running estimate over all updates (used to compare with
+    // tools such as Wireshark that report mean/max jitter).
+    double mean_units() const { return updates_ == 0 ? 0.0 : sum_ / static_cast<double>(updates_); }
+    double max_units() const { return max_; }
+    static double to_ms(double units, uint32_t clock_rate) { return clock_rate == 0 ? 0.0 : units * 1000.0 / clock_rate; }
     double jitter_ms(uint32_t clock_rate) const {
         return clock_rate == 0 ? 0.0 : jitter_ * 1000.0 / clock_rate;
     }
@@ -43,6 +48,9 @@ private:
     uint64_t prev_arrival_ns_ = 0;
     uint32_t prev_timestamp_ = 0;
     double jitter_ = 0.0;
+    double sum_ = 0.0;      // sum of J after every update
+    double max_ = 0.0;
+    uint64_t updates_ = 0;
 };
 
 }  // namespace rtpscope

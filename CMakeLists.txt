@@ -46,6 +46,10 @@ target_link_libraries(rtpscope_core PUBLIC rtpscope_warnings)
 add_executable(rtp_scope tools/rtp_scope.cpp)
 target_link_libraries(rtp_scope PRIVATE rtpscope_core)
 
+add_executable(pcap_mutate tools/pcap_mutate.cpp)
+target_include_directories(pcap_mutate PRIVATE tests)
+target_link_libraries(pcap_mutate PRIVATE rtpscope_core)
+
 add_executable(rtp_gen tools/rtp_gen.cpp)
 target_link_libraries(rtp_gen PRIVATE rtpscope_core)
 
@@ -63,10 +67,12 @@ set(TEST_NAMES
   test_traffic
   test_e2e
   test_jitter_buffer
+  test_mutation
 )
 foreach(t ${TEST_NAMES})
   add_executable(${t} tests/${t}.cpp)
   target_link_libraries(${t} PRIVATE rtpscope_core)
+  target_include_directories(${t} PRIVATE tests)
   add_test(NAME ${t} COMMAND ${t})
 endforeach()
 
@@ -75,4 +81,20 @@ find_program(BASH_PROGRAM bash)
 if(BASH_PROGRAM)
   add_test(NAME cli_smoke
            COMMAND ${BASH_PROGRAM} ${CMAKE_SOURCE_DIR}/tests/cli_smoke.sh ${CMAKE_BINARY_DIR})
+endif()
+
+# ---- benchmark ----
+# rtp_bench compiles the core sources itself with -O2 -DNDEBUG so the numbers do
+# not depend on CMAKE_BUILD_TYPE. `cmake --build build --target bench` runs it.
+add_executable(rtp_bench bench/bench.cpp ${CORE_SOURCES})
+target_include_directories(rtp_bench PRIVATE src)
+target_link_libraries(rtp_bench PRIVATE rtpscope_warnings)
+target_compile_options(rtp_bench PRIVATE -O2 -DNDEBUG)
+target_compile_definitions(rtp_bench PRIVATE
+  BENCH_FLAGS="-std=c++17 -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Werror")
+if(BASH_PROGRAM)
+  add_custom_target(bench
+    COMMAND ${BASH_PROGRAM} ${CMAKE_SOURCE_DIR}/scripts/bench.sh --bin ${CMAKE_BINARY_DIR}
+    DEPENDS rtp_bench rtp_gen
+    USES_TERMINAL)
 endif()

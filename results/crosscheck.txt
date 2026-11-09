@@ -1,0 +1,10 @@
+# scripts/crosscheck_tshark.sh --bin build
+# TShark (Wireshark) 3.6.2 (Git v3.6.2 packaged as 3.6.2-2)
+scenario                           | pkts(ts) pkts(rs) |  lost(ts)  lost(rs) | jitter mean ms (ts/rs) | jitter max ms (ts/rs)
+clean network                      |     1000     1000 |         0         0 |     0.000 / 0.000     |     0.000 / 0.000    
+5% loss                            |      953      953 |        47        47 |     0.000 / 0.000     |     0.000 / 0.000    
+loss + normal jitter 15ms          |      964      964 |        36        36 |     9.308 / 9.308     |    13.427 / 13.427   
+uniform jitter 40ms                |     1000     1000 |         0         0 |    12.231 / 12.231    |    16.048 / 16.048   
+seq wraparound + loss              |      969      969 |        31        31 |     3.231 / 3.231     |     5.097 / 5.097    
+reorder 5% + dup 5% + loss         |     1027     1027 |       -27       -27 |     6.189 / 6.515     |    18.380 / 18.623   
+Opus-like PT 111 (48 kHz) jitter   |      980      980 |        20        20 |     0.000 / 11.574    |     0.000 / 18.113   

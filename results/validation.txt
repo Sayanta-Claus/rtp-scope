@@ -1,0 +1,123 @@
+# scripts/validate.sh --count 120 --bin build
+# fields compared exactly: received unique expected lost duplicates reordered ext_highest
+ok   #1   seed=1 packets=400 loss=0.01 reorder=0 dup=0 jitter=0ms start=4093 nano | sent=400 dropped=4 dup=0 reordered=0
+ok   #2   seed=2 packets=400 loss=0.05 reorder=0 dup=0 jitter=3ms start=8186 be | sent=400 dropped=23 dup=0 reordered=0
+ok   #3   seed=3 packets=400 loss=0.10 reorder=0.02 dup=0 jitter=3ms start=wrap sll | sent=400 dropped=40 dup=0 reordered=11
+ok   #4   seed=4 packets=400 loss=0.20 reorder=0.02 dup=0 jitter=10ms start=16372 vlan | sent=400 dropped=93 dup=0 reordered=8
+ok   #5   seed=5 packets=400 loss=0.30 reorder=0.02 dup=0.01 jitter=10ms start=20465 nano talkspurts | sent=400 dropped=113 dup=2 reordered=5
+ok   #6   seed=6 packets=400 loss=0 reorder=0.05 dup=0.01 jitter=30ms start=wrap ts-wrap | sent=400 dropped=0 dup=2 reordered=18
+ok   #7   seed=7 packets=900 loss=0.01 reorder=0.05 dup=0.01 jitter=30ms start=28651 be | sent=900 dropped=8 dup=11 reordered=41
+ok   #8   seed=8 packets=900 loss=0.05 reorder=0.05 dup=0.01 jitter=60ms start=32744 | sent=900 dropped=42 dup=10 reordered=37
+ok   #9   seed=9 packets=900 loss=0.10 reorder=0.10 dup=0.01 jitter=60ms start=wrap nano | sent=900 dropped=97 dup=10 reordered=68
+ok   #10  seed=10 packets=900 loss=0.20 reorder=0.10 dup=0.05 jitter=0ms start=40930 vlan | sent=900 dropped=204 dup=31 reordered=55
+ok   #11  seed=11 packets=900 loss=0.30 reorder=0.10 dup=0.05 jitter=0ms start=45023 | sent=900 dropped=308 dup=28 reordered=60
+ok   #12  seed=12 packets=900 loss=0 reorder=0.20 dup=0.05 jitter=3ms start=wrap be | sent=900 dropped=0 dup=40 reordered=144
+ok   #13  seed=13 packets=900 loss=0.01 reorder=0.20 dup=0.05 jitter=3ms start=53209 nano talkspurts | sent=900 dropped=12 dup=45 reordered=159
+ok   #14  seed=14 packets=1500 loss=0.05 reorder=0.20 dup=0.05 jitter=10ms start=57302 | sent=1500 dropped=84 dup=68 reordered=235
+ok   #15  seed=15 packets=1500 loss=0.10 reorder=0 dup=0.15 jitter=10ms start=wrap ts-wrap | sent=1500 dropped=155 dup=215 reordered=0
+ok   #16  seed=16 packets=1500 loss=0.20 reorder=0 dup=0.15 jitter=30ms start=65488 vlan | sent=1500 dropped=321 dup=165 reordered=0
+ok   #17  seed=17 packets=1500 loss=0.30 reorder=0 dup=0.15 jitter=30ms start=4045 nano be sll | sent=1500 dropped=473 dup=146 reordered=0
+ok   #18  seed=18 packets=1500 loss=0 reorder=0.02 dup=0.15 jitter=60ms start=wrap | sent=1500 dropped=0 dup=238 reordered=25
+ok   #19  seed=19 packets=1500 loss=0.01 reorder=0.02 dup=0.15 jitter=60ms start=12231 | sent=1500 dropped=25 dup=224 reordered=34
+ok   #20  seed=20 packets=1500 loss=0.05 reorder=0.02 dup=0 jitter=0ms start=16324 | sent=1500 dropped=95 dup=0 reordered=27
+ok   #21  seed=21 packets=2500 loss=0.10 reorder=0.05 dup=0 jitter=0ms start=wrap nano talkspurts | sent=2500 dropped=239 dup=0 reordered=112
+ok   #22  seed=22 packets=2500 loss=0.20 reorder=0.05 dup=0 jitter=3ms start=24510 be vlan | sent=2500 dropped=533 dup=0 reordered=82
+ok   #23  seed=23 packets=2500 loss=0.30 reorder=0.05 dup=0 jitter=3ms start=28603 | sent=2500 dropped=720 dup=0 reordered=71
+ok   #24  seed=24 packets=2500 loss=0 reorder=0.10 dup=0 jitter=10ms start=wrap sll ts-wrap | sent=2500 dropped=0 dup=0 reordered=232
+ok   #25  seed=25 packets=2500 loss=0.01 reorder=0.10 dup=0.01 jitter=10ms start=36789 nano | sent=2500 dropped=40 dup=23 reordered=213
+ok   #26  seed=26 packets=2500 loss=0.05 reorder=0.10 dup=0.01 jitter=30ms start=40882 | sent=2500 dropped=132 dup=21 reordered=200
+ok   #27  seed=27 packets=2500 loss=0.10 reorder=0.20 dup=0.01 jitter=30ms start=wrap be | sent=2500 dropped=257 dup=16 reordered=337
+ok   #28  seed=28 packets=400 loss=0.20 reorder=0.20 dup=0.01 jitter=60ms start=49068 vlan | sent=400 dropped=102 dup=5 reordered=53
+ok   #29  seed=29 packets=400 loss=0.30 reorder=0.20 dup=0.01 jitter=60ms start=53161 nano talkspurts | sent=400 dropped=115 dup=3 reordered=48
+ok   #30  seed=30 packets=400 loss=0 reorder=0 dup=0.05 jitter=0ms start=wrap | sent=400 dropped=0 dup=12 reordered=0
+ok   #31  seed=31 packets=400 loss=0.01 reorder=0 dup=0.05 jitter=0ms start=61347 sll | sent=400 dropped=3 dup=14 reordered=0
+ok   #32  seed=32 packets=400 loss=0.05 reorder=0 dup=0.05 jitter=3ms start=65440 be | sent=400 dropped=12 dup=19 reordered=0
+ok   #33  seed=33 packets=400 loss=0.10 reorder=0.02 dup=0.05 jitter=3ms start=wrap nano ts-wrap | sent=400 dropped=44 dup=12 reordered=9
+ok   #34  seed=34 packets=400 loss=0.20 reorder=0.02 dup=0.05 jitter=10ms start=8090 vlan | sent=400 dropped=81 dup=15 reordered=7
+ok   #35  seed=35 packets=900 loss=0.30 reorder=0.02 dup=0.15 jitter=10ms start=12183 | sent=900 dropped=294 dup=81 reordered=16
+ok   #36  seed=36 packets=900 loss=0 reorder=0.05 dup=0.15 jitter=30ms start=wrap | sent=900 dropped=0 dup=149 reordered=45
+ok   #37  seed=37 packets=900 loss=0.01 reorder=0.05 dup=0.15 jitter=30ms start=20369 nano be talkspurts | sent=900 dropped=4 dup=142 reordered=40
+ok   #38  seed=38 packets=900 loss=0.05 reorder=0.05 dup=0.15 jitter=60ms start=24462 sll | sent=900 dropped=47 dup=122 reordered=29
+ok   #39  seed=39 packets=900 loss=0.10 reorder=0.10 dup=0.15 jitter=60ms start=wrap | sent=900 dropped=89 dup=118 reordered=82
+ok   #40  seed=40 packets=900 loss=0.20 reorder=0.10 dup=0 jitter=0ms start=32648 vlan | sent=900 dropped=175 dup=0 reordered=64
+ok   #41  seed=41 packets=900 loss=0.30 reorder=0.10 dup=0 jitter=0ms start=36741 nano | sent=900 dropped=269 dup=0 reordered=59
+ok   #42  seed=42 packets=1500 loss=0 reorder=0.20 dup=0 jitter=3ms start=wrap be ts-wrap | sent=1500 dropped=0 dup=0 reordered=243
+ok   #43  seed=43 packets=1500 loss=0.01 reorder=0.20 dup=0 jitter=3ms start=44927 | sent=1500 dropped=15 dup=0 reordered=233
+ok   #44  seed=44 packets=1500 loss=0.05 reorder=0.20 dup=0 jitter=10ms start=49020 | sent=1500 dropped=59 dup=0 reordered=220
+ok   #45  seed=45 packets=1500 loss=0.10 reorder=0 dup=0.01 jitter=10ms start=wrap nano sll talkspurts | sent=1500 dropped=159 dup=11 reordered=0
+ok   #46  seed=46 packets=1500 loss=0.20 reorder=0 dup=0.01 jitter=30ms start=57206 vlan | sent=1500 dropped=313 dup=9 reordered=0
+ok   #47  seed=47 packets=1500 loss=0.30 reorder=0 dup=0.01 jitter=30ms start=61299 be | sent=1500 dropped=429 dup=11 reordered=0
+ok   #48  seed=48 packets=1500 loss=0 reorder=0.02 dup=0.01 jitter=60ms start=wrap | sent=1500 dropped=0 dup=13 reordered=18
+ok   #49  seed=49 packets=2500 loss=0.01 reorder=0.02 dup=0.01 jitter=60ms start=3949 nano | sent=2500 dropped=22 dup=32 reordered=41
+ok   #50  seed=50 packets=2500 loss=0.05 reorder=0.02 dup=0.05 jitter=0ms start=8042 | sent=2500 dropped=117 dup=114 reordered=37
+ok   #51  seed=51 packets=2500 loss=0.10 reorder=0.05 dup=0.05 jitter=0ms start=wrap ts-wrap | sent=2500 dropped=250 dup=114 reordered=121
+ok   #52  seed=52 packets=2500 loss=0.20 reorder=0.05 dup=0.05 jitter=3ms start=16228 be vlan | sent=2500 dropped=516 dup=104 reordered=103
+ok   #53  seed=53 packets=2500 loss=0.30 reorder=0.05 dup=0.05 jitter=3ms start=20321 nano talkspurts | sent=2500 dropped=687 dup=88 reordered=87
+ok   #54  seed=54 packets=2500 loss=0 reorder=0.10 dup=0.05 jitter=10ms start=wrap | sent=2500 dropped=0 dup=122 reordered=230
+ok   #55  seed=55 packets=2500 loss=0.01 reorder=0.10 dup=0.15 jitter=10ms start=28507 | sent=2500 dropped=28 dup=349 reordered=241
+ok   #56  seed=56 packets=400 loss=0.05 reorder=0.10 dup=0.15 jitter=30ms start=32600 | sent=400 dropped=21 dup=63 reordered=34
+ok   #57  seed=57 packets=400 loss=0.10 reorder=0.20 dup=0.15 jitter=30ms start=wrap nano be | sent=400 dropped=38 dup=52 reordered=60
+ok   #58  seed=58 packets=400 loss=0.20 reorder=0.20 dup=0.15 jitter=60ms start=40786 vlan | sent=400 dropped=72 dup=47 reordered=60
+ok   #59  seed=59 packets=400 loss=0.30 reorder=0.20 dup=0.15 jitter=60ms start=44879 sll | sent=400 dropped=105 dup=42 reordered=45
+ok   #60  seed=60 packets=400 loss=0 reorder=0 dup=0 jitter=0ms start=wrap ts-wrap | sent=400 dropped=0 dup=0 reordered=0
+ok   #61  seed=61 packets=400 loss=0.01 reorder=0 dup=0 jitter=0ms start=53065 nano talkspurts | sent=400 dropped=3 dup=0 reordered=0
+ok   #62  seed=62 packets=400 loss=0.05 reorder=0 dup=0 jitter=3ms start=57158 be | sent=400 dropped=21 dup=0 reordered=0
+ok   #63  seed=63 packets=900 loss=0.10 reorder=0.02 dup=0 jitter=3ms start=wrap | sent=900 dropped=77 dup=0 reordered=20
+ok   #64  seed=64 packets=900 loss=0.20 reorder=0.02 dup=0 jitter=10ms start=65344 vlan | sent=900 dropped=178 dup=0 reordered=12
+ok   #65  seed=65 packets=900 loss=0.30 reorder=0.02 dup=0.01 jitter=10ms start=3901 nano | sent=900 dropped=239 dup=5 reordered=14
+ok   #66  seed=66 packets=900 loss=0 reorder=0.05 dup=0.01 jitter=30ms start=wrap sll | sent=900 dropped=0 dup=13 reordered=48
+ok   #67  seed=67 packets=900 loss=0.01 reorder=0.05 dup=0.01 jitter=30ms start=12087 be | sent=900 dropped=5 dup=3 reordered=33
+ok   #68  seed=68 packets=900 loss=0.05 reorder=0.05 dup=0.01 jitter=60ms start=16180 | sent=900 dropped=49 dup=11 reordered=36
+ok   #69  seed=69 packets=900 loss=0.10 reorder=0.10 dup=0.01 jitter=60ms start=wrap nano talkspurts ts-wrap | sent=900 dropped=96 dup=12 reordered=72
+ok   #70  seed=70 packets=1500 loss=0.20 reorder=0.10 dup=0.05 jitter=0ms start=24366 vlan | sent=1500 dropped=319 dup=55 reordered=105
+ok   #71  seed=71 packets=1500 loss=0.30 reorder=0.10 dup=0.05 jitter=0ms start=28459 | sent=1500 dropped=445 dup=47 reordered=111
+ok   #72  seed=72 packets=1500 loss=0 reorder=0.20 dup=0.05 jitter=3ms start=wrap be | sent=1500 dropped=0 dup=64 reordered=254
+ok   #73  seed=73 packets=1500 loss=0.01 reorder=0.20 dup=0.05 jitter=3ms start=36645 nano sll | sent=1500 dropped=16 dup=75 reordered=247
+ok   #74  seed=74 packets=1500 loss=0.05 reorder=0.20 dup=0.05 jitter=10ms start=40738 | sent=1500 dropped=84 dup=57 reordered=256
+ok   #75  seed=75 packets=1500 loss=0.10 reorder=0 dup=0.15 jitter=10ms start=wrap | sent=1500 dropped=131 dup=202 reordered=0
+ok   #76  seed=76 packets=1500 loss=0.20 reorder=0 dup=0.15 jitter=30ms start=48924 vlan | sent=1500 dropped=305 dup=208 reordered=0
+ok   #77  seed=77 packets=2500 loss=0.30 reorder=0 dup=0.15 jitter=30ms start=53017 nano be talkspurts | sent=2500 dropped=758 dup=263 reordered=0
+ok   #78  seed=78 packets=2500 loss=0 reorder=0.02 dup=0.15 jitter=60ms start=wrap ts-wrap | sent=2500 dropped=0 dup=352 reordered=51
+ok   #79  seed=79 packets=2500 loss=0.01 reorder=0.02 dup=0.15 jitter=60ms start=61203 | sent=2500 dropped=26 dup=371 reordered=49
+ok   #80  seed=80 packets=2500 loss=0.05 reorder=0.02 dup=0 jitter=0ms start=65296 sll | sent=2500 dropped=119 dup=0 reordered=54
+ok   #81  seed=81 packets=2500 loss=0.10 reorder=0.05 dup=0 jitter=0ms start=wrap nano | sent=2500 dropped=233 dup=0 reordered=120
+ok   #82  seed=82 packets=2500 loss=0.20 reorder=0.05 dup=0 jitter=3ms start=7946 be vlan | sent=2500 dropped=495 dup=0 reordered=98
+ok   #83  seed=83 packets=2500 loss=0.30 reorder=0.05 dup=0 jitter=3ms start=12039 | sent=2500 dropped=782 dup=0 reordered=69
+ok   #84  seed=84 packets=400 loss=0 reorder=0.10 dup=0 jitter=10ms start=wrap | sent=400 dropped=0 dup=0 reordered=30
+ok   #85  seed=85 packets=400 loss=0.01 reorder=0.10 dup=0.01 jitter=10ms start=20225 nano talkspurts | sent=400 dropped=5 dup=3 reordered=34
+ok   #86  seed=86 packets=400 loss=0.05 reorder=0.10 dup=0.01 jitter=30ms start=24318 | sent=400 dropped=23 dup=0 reordered=34
+ok   #87  seed=87 packets=400 loss=0.10 reorder=0.20 dup=0.01 jitter=30ms start=wrap be sll ts-wrap | sent=400 dropped=36 dup=4 reordered=58
+ok   #88  seed=88 packets=400 loss=0.20 reorder=0.20 dup=0.01 jitter=60ms start=32504 vlan | sent=400 dropped=76 dup=1 reordered=60
+ok   #89  seed=89 packets=400 loss=0.30 reorder=0.20 dup=0.01 jitter=60ms start=36597 nano | sent=400 dropped=145 dup=4 reordered=45
+ok   #90  seed=90 packets=400 loss=0 reorder=0 dup=0.05 jitter=0ms start=wrap | sent=400 dropped=0 dup=22 reordered=0
+ok   #91  seed=91 packets=900 loss=0.01 reorder=0 dup=0.05 jitter=0ms start=44783 | sent=900 dropped=7 dup=49 reordered=0
+ok   #92  seed=92 packets=900 loss=0.05 reorder=0 dup=0.05 jitter=3ms start=48876 be | sent=900 dropped=45 dup=47 reordered=0
+ok   #93  seed=93 packets=900 loss=0.10 reorder=0.02 dup=0.05 jitter=3ms start=wrap nano talkspurts | sent=900 dropped=92 dup=45 reordered=16
+ok   #94  seed=94 packets=900 loss=0.20 reorder=0.02 dup=0.05 jitter=10ms start=57062 vlan | sent=900 dropped=185 dup=41 reordered=15
+ok   #95  seed=95 packets=900 loss=0.30 reorder=0.02 dup=0.15 jitter=10ms start=61155 | sent=900 dropped=285 dup=81 reordered=9
+ok   #96  seed=96 packets=900 loss=0 reorder=0.05 dup=0.15 jitter=30ms start=wrap ts-wrap | sent=900 dropped=0 dup=144 reordered=43
+ok   #97  seed=97 packets=900 loss=0.01 reorder=0.05 dup=0.15 jitter=30ms start=3805 nano be | sent=900 dropped=9 dup=116 reordered=35
+ok   #98  seed=98 packets=1500 loss=0.05 reorder=0.05 dup=0.15 jitter=60ms start=7898 | sent=1500 dropped=66 dup=221 reordered=70
+ok   #99  seed=99 packets=1500 loss=0.10 reorder=0.10 dup=0.15 jitter=60ms start=wrap | sent=1500 dropped=141 dup=221 reordered=122
+ok   #100 seed=100 packets=1500 loss=0.20 reorder=0.10 dup=0 jitter=0ms start=16084 vlan | sent=1500 dropped=283 dup=0 reordered=120
+ok   #101 seed=101 packets=1500 loss=0.30 reorder=0.10 dup=0 jitter=0ms start=20177 nano sll talkspurts | sent=1500 dropped=442 dup=0 reordered=97
+ok   #102 seed=102 packets=1500 loss=0 reorder=0.20 dup=0 jitter=3ms start=wrap be | sent=1500 dropped=0 dup=0 reordered=247
+ok   #103 seed=103 packets=1500 loss=0.01 reorder=0.20 dup=0 jitter=3ms start=28363 | sent=1500 dropped=14 dup=0 reordered=233
+ok   #104 seed=104 packets=1500 loss=0.05 reorder=0.20 dup=0 jitter=10ms start=32456 | sent=1500 dropped=90 dup=0 reordered=250
+ok   #105 seed=105 packets=2500 loss=0.10 reorder=0 dup=0.01 jitter=10ms start=wrap nano ts-wrap | sent=2500 dropped=244 dup=21 reordered=0
+ok   #106 seed=106 packets=2500 loss=0.20 reorder=0 dup=0.01 jitter=30ms start=40642 vlan | sent=2500 dropped=524 dup=18 reordered=0
+ok   #107 seed=107 packets=2500 loss=0.30 reorder=0 dup=0.01 jitter=30ms start=44735 be | sent=2500 dropped=771 dup=14 reordered=0
+ok   #108 seed=108 packets=2500 loss=0 reorder=0.02 dup=0.01 jitter=60ms start=wrap sll | sent=2500 dropped=0 dup=22 reordered=45
+ok   #109 seed=109 packets=2500 loss=0.01 reorder=0.02 dup=0.01 jitter=60ms start=52921 nano talkspurts | sent=2500 dropped=31 dup=24 reordered=40
+ok   #110 seed=110 packets=2500 loss=0.05 reorder=0.02 dup=0.05 jitter=0ms start=57014 | sent=2500 dropped=125 dup=109 reordered=43
+ok   #111 seed=111 packets=2500 loss=0.10 reorder=0.05 dup=0.05 jitter=0ms start=wrap | sent=2500 dropped=271 dup=112 reordered=114
+ok   #112 seed=112 packets=400 loss=0.20 reorder=0.05 dup=0.05 jitter=3ms start=65200 be vlan | sent=400 dropped=68 dup=14 reordered=10
+ok   #113 seed=113 packets=400 loss=0.30 reorder=0.05 dup=0.05 jitter=3ms start=3757 nano | sent=400 dropped=131 dup=13 reordered=7
+ok   #114 seed=114 packets=400 loss=0 reorder=0.10 dup=0.05 jitter=10ms start=wrap ts-wrap | sent=400 dropped=0 dup=22 reordered=32
+ok   #115 seed=115 packets=400 loss=0.01 reorder=0.10 dup=0.15 jitter=10ms start=11943 sll | sent=400 dropped=3 dup=52 reordered=32
+ok   #116 seed=116 packets=400 loss=0.05 reorder=0.10 dup=0.15 jitter=30ms start=16036 | sent=400 dropped=19 dup=57 reordered=36
+ok   #117 seed=117 packets=400 loss=0.10 reorder=0.20 dup=0.15 jitter=30ms start=wrap nano be talkspurts | sent=400 dropped=39 dup=55 reordered=56
+ok   #118 seed=118 packets=400 loss=0.20 reorder=0.20 dup=0.15 jitter=60ms start=24222 vlan | sent=400 dropped=80 dup=53 reordered=54
+ok   #119 seed=119 packets=900 loss=0.30 reorder=0.20 dup=0.15 jitter=60ms start=28315 | sent=900 dropped=272 dup=102 reordered=95
+ok   #120 seed=120 packets=900 loss=0 reorder=0 dup=0 jitter=0ms start=wrap | sent=900 dropped=0 dup=0 reordered=0
+120/120 traces matched

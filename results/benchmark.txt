@@ -1,0 +1,22 @@
+# scripts/bench.sh --packets 1000000 --runs 5 --bin /mnt/d/rtp-scope/build
+cpu      : 12th Gen Intel(R) Core(TM) i5-12450H
+cores    : 12 logical
+memory   : 7778 MiB
+kernel   : Linux 6.18.54.1-microsoft-standard-WSL2
+os       : Ubuntu 22.04.3 LTS
+note     : running under WSL2 (virtualised; /mnt/* is a network-backed filesystem)
+compiler : gcc 11.4.0
+flags    : -std=c++17 -O2 -DNDEBUG -Wall -Wextra -Wpedantic -Werror
+capture  : 1000000 packets sent by the generator (1% loss, 0.5% reorder, 0.2% duplicate) ->
+           991859 packets in the file, 228.128 MB (Ethernet/IPv4/UDP/RTP, 160-byte payloads)
+runs     : 5 (median reported)
+
+stage                     packets/sec         MB/s
+parse only                   10313912       2372.2
+parse + analysis             11191082       2573.9
+
+median parse time    : 0.0962 s
+median analysis time : 0.0886 s
+peak memory (median) : 4740 kB  (VmHWM; getrusage ru_maxrss: 4524 kB)
+
+individual runs (analyze packets/sec): 11132320 10356681 11881754 11191082 11470405 

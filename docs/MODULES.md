@@ -22,7 +22,6 @@ Plain-English tour of every module, with the questions an interviewer is likely 
  (pcap_writer is the mirror image: it builds frames/pcaps for rtp_gen and tests.)
 ```
 
-_Later milestones add: seq_tracker, jitter, stream_stats, report, rtp_gen, jitter_buffer._
 
 ---
 
@@ -146,7 +145,7 @@ Data flow added in this milestone:
 
 **Questions**
 - *Why include the SSRC in the key?* Several streams (audio, video, different participants) can share ports in a mixer or bundle.
-- *Why ignore duplicates in the jitter calculation?* A duplicate has the same RTP timestamp as the original but a later arrival, which would look like a big delay swing that never happened to the media.
+- *Why ignore duplicates in the jitter calculation?* A duplicate carries the same RTP timestamp as the original, so it is not a new measurement of the media's delay: arriving right away it adds `D = 0` (pulling J down), arriving much later it adds a spike the media never experienced. (Wireshark includes them, which is the only reason its jitter differs from ours on traces with duplicates; I verified that by including them temporarily and matching tshark to four decimals.)
 
 ## report (`src/report.*`)
 
@@ -222,3 +221,59 @@ Data flow added in this milestone:
 - *Why the bias-corrected weight in the estimator?* With alpha = 0.998 a plain EWMA would take ~500 packets (10 s of audio) to forget its start value; using `min(alpha, 1 - 1/count)` makes the first samples a running average.
 - *What about packets that are lost?* A jitter buffer cannot fix them; they are reported separately (and a real codec would conceal them with packet-loss concealment).
 - *How is lateness judged causally?* The delay applied to a packet is the one chosen before that packet's own transit enters the estimate.
+
+---
+
+# Milestones 5 and 6: tests, robustness, benchmark, cross-check
+
+```
+ tests/ (ctest)                        scripts/
+   test_harness.hpp  CHECK/TEST          validate.sh   rtp_gen --truth  vs  rtp_scope --json  (120 traces, exact)
+   test_*.cpp (12)   unit + e2e          fuzz.sh       pcap_mutate -> rtp_scope under ASan/UBSan (1000 mutants)
+   cli_smoke.sh      real binaries       bench.sh      rtp_gen 1M pkts -> rtp_bench x5 -> median
+   mutator.hpp  <--- shared by test_mutation.cpp and tools/pcap_mutate.cpp
+                                         crosscheck_tshark.sh   tshark -z rtp,streams  vs  rtp_scope
+                                         make_sweep.sh + plot_sweep.py   --sweep CSV -> chart
+```
+
+## Test harness (`tests/test_harness.hpp`)
+
+**How it works.** `TEST(name)` registers a function at static-initialisation time; `CHECK` / `CHECK_EQ` record failures with file:line and keep going; `TEST_MAIN()` runs everything and returns non-zero on any failure, which is all `ctest` needs.
+
+**Questions**
+- *Why no GoogleTest?* The project is dependency-free, and a 60-line harness is easy to explain. It lacks fixtures and mocking, which these tests do not need.
+- *What do the tests cover?* Sequence wraparound, truncated and malformed packets, bad RTP version, VLAN, both pcap byte orders and both timestamp resolutions, duplicates and reordering, a hand-computed jitter example, jitter-buffer arithmetic, and generator-vs-analyzer agreement.
+
+## Ground-truth validation (`scripts/validate.sh`) and the oracle idea
+
+**How it works.** `rtp_gen` knows how many packets it dropped/duplicated/reordered; `rtp_scope` measures the same from the file. 120 parameter combinations must agree exactly on received, unique, expected, lost, duplicates, reordered and highest extended sequence number.
+
+**Questions**
+- *Is that circular?* Partly: both tools encode my definitions of "reordered" and "lost". That is why the definitions are written down in the README and why the independent Wireshark cross-check exists.
+- *Why is "lost" the *observable* loss?* A receiver cannot know about packets dropped before the first or after the last delivered packet.
+
+## Mutation robustness (`tests/mutator.hpp`, `test_mutation.cpp`, `scripts/fuzz.sh`)
+
+**How it works.** Deterministic corruptions (bit flips, byte overwrites, truncation, chunk delete/insert, extreme 16/32-bit values, half of them in the first 256 bytes where the headers are) are applied to valid captures; each must be analysed or rejected with an error, never crash, hang or trip ASan/UBSan. `fuzz.sh` does it on the real binary with distinct exit codes for sanitizer failures.
+
+**Questions**
+- *Is this fuzzing?* It is mutation testing with fixed seeds, not coverage-guided; good at catching missing bounds checks, not a proof. A real fuzzer (libFuzzer/AFL) would be the next step.
+- *What did designing it teach me?* A damaged record length of ~16 MB made the reader allocate that much before noticing the file was short; it now reads in 64 KiB chunks.
+- *What do ASan and UBSan catch?* Out-of-bounds and use-after-free memory errors, and undefined behaviour such as signed overflow or misaligned access; `-fno-sanitize-recover` makes any finding a hard failure.
+
+## Benchmark (`bench/bench.cpp`, `scripts/bench.sh`)
+
+**How it works.** `rtp_gen` writes a 1M-packet capture; `rtp_bench` (always built with `-O2`) times a parse-only pass and a full-analysis pass and reads its own peak RSS from `/proc/self/status`; the script runs it 5 times in fresh processes and prints the median.
+
+**Questions**
+- *Why the median?* One slow run (cache, scheduler noise) must not skew the result; the median ignores outliers.
+- *Why is memory flat?* Records are streamed through one buffer, and per-stream state is a few KB (an 8 KB duplicate ring).
+- *What does it not measure?* Disk speed (the capture is in the page cache) and anything on bare metal (it ran under WSL2).
+
+## Wireshark cross-check (`scripts/crosscheck_tshark.sh`)
+
+**How it works.** Same generated files through `tshark -z rtp,streams` and `rtp_scope --json`; packets, lost and mean/max jitter printed side by side.
+
+**Questions**
+- *Why do they differ on duplicates?* Wireshark includes duplicates in the jitter estimate; rtp_scope does not (documented in `stream_stats`).
+- *Why does tshark show 0 jitter for payload type 111?* Dynamic payload types have no fixed clock rate without SDP.

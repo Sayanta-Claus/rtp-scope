@@ -106,7 +106,11 @@ int main(int argc, char** argv) {
     if (json && (simulate || sweep)) return usage_error("--json cannot be combined with --simulate/--sweep");
     if (simulate && sweep) return usage_error("use either --simulate or --sweep, not both");
 
-    std::ifstream file(path, std::ios::binary);
+    // A 1 MiB stream buffer (set before open) keeps read() syscalls off the hot path.
+    std::vector<char> io_buffer(1 << 20);
+    std::ifstream file;
+    file.rdbuf()->pubsetbuf(io_buffer.data(), static_cast<std::streamsize>(io_buffer.size()));
+    file.open(path, std::ios::binary);
     if (!file) {
         std::fprintf(stderr, "rtp_scope: cannot open '%s'\n", path.c_str());
         return 1;

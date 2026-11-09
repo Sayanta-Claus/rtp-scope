@@ -1,0 +1,9 @@
+# scripts/fuzz.sh --bin build-san --count 1000
+mutations run     : 1000
+analysed (exit 0) : 849
+rejected (exit 1) : 151
+crashes/hangs/sanitizer reports : 0
+
+# build-san/test_mutation (in-process mutation test, 3000 fixed seeds, same sanitizer build)
+mutations=3000 analysed_ok=2643 rejected_cleanly=357 slowest_case_ms=9.9
+12033 checks, 0 failures

@@ -178,7 +178,9 @@ void print_json(std::ostream& out, const std::string& file, const Analyzer& a) {
         out << fmt("      \"seq_rejected\": %llu,\n", u(s.seq_rejected()));
         out << fmt("      \"seq_resyncs\": %llu,\n", u(s.seq_resyncs()));
         out << fmt("      \"jitter_rtp_units\": %.4f,\n", s.jitter_units());
-        out << fmt("      \"jitter_ms\": %.4f\n", s.jitter_ms());
+        out << fmt("      \"jitter_ms\": %.4f,\n", s.jitter_ms());
+        out << fmt("      \"jitter_mean_ms\": %.4f,\n", s.jitter_mean_ms());
+        out << fmt("      \"jitter_max_ms\": %.4f\n", s.jitter_max_ms());
         out << "    }";
     }
     out << (first ? "]\n" : "\n  ]\n");

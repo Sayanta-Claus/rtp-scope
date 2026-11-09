@@ -4,6 +4,7 @@
 // Data flow: (arrival_ns, rtp_timestamp, clock) --> jitter_ (double, RTP units).
 #include "jitter.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace rtpscope {
@@ -21,6 +22,9 @@ void JitterEstimator::update(uint64_t arrival_ns, uint32_t rtp_timestamp, uint32
             static_cast<double>(static_cast<int32_t>(rtp_timestamp - prev_timestamp_));
         const double d = arrival_delta - timestamp_delta;
         jitter_ += (std::fabs(d) - jitter_) / 16.0;
+        sum_ += jitter_;
+        max_ = std::max(max_, jitter_);
+        ++updates_;
     }
     has_prev_ = true;
     prev_arrival_ns_ = arrival_ns;

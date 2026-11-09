@@ -20,8 +20,11 @@
 // Design decisions:
 //   * A stream is keyed by (src ip, src port, dst ip, dst port, SSRC), so two
 //     SSRCs on one port pair, or one SSRC seen from two sources, stay apart.
-//   * Jitter ignores duplicates and rejected packets: a duplicate has the same
-//     RTP timestamp as the original, so it would look like a huge D.
+//   * Jitter ignores duplicates and rejected packets: a duplicate carries the
+//     same RTP timestamp as the original, so it is not a new delay sample. One
+//     arriving right after the original would add D = 0 (biasing J down), one
+//     arriving much later a spurious spike. (Wireshark does include them; see
+//     the README's cross-check section.)
 //   * The clock rate is fixed from the first packet's payload type; a change of
 //     payload type mid-stream (e.g. DTMF events) is flagged, not split.
 #pragma once
@@ -90,6 +93,8 @@ public:
 
     double jitter_units() const { return jitter_.jitter_units(); }
     double jitter_ms() const { return jitter_.jitter_ms(clock_rate_); }
+    double jitter_mean_ms() const { return JitterEstimator::to_ms(jitter_.mean_units(), clock_rate_); }
+    double jitter_max_ms() const { return JitterEstimator::to_ms(jitter_.max_units(), clock_rate_); }
 
     uint64_t first_arrival_ns() const { return first_ns_; }
     const std::vector<Arrival>& arrivals() const { return arrivals_; }

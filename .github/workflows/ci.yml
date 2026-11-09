@@ -24,6 +24,9 @@ jobs:
         run: cmake --build build -j
       - name: Test
         run: ctest --test-dir build --output-on-failure
+      - name: Ground-truth validation (120 generated traces)
+        if: matrix.compiler == 'gcc'
+        run: scripts/validate.sh --count 120 --bin build
 
   sanitizers:
     name: ASan + UBSan
@@ -36,3 +39,5 @@ jobs:
         run: cmake --build build-san -j
       - name: Test
         run: ctest --test-dir build-san --output-on-failure
+      - name: Mutation fuzzing of the real binary (1000 mutations)
+        run: scripts/fuzz.sh --bin build-san --count 1000

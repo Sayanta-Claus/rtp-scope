@@ -21,6 +21,7 @@
 //     ByteReader, so there is no struct overlay anywhere.
 #include "pcap_reader.hpp"
 
+#include <algorithm>
 #include <array>
 
 #include "byte_reader.hpp"
@@ -32,6 +33,7 @@ namespace {
 constexpr size_t kGlobalHeaderSize = 24;
 constexpr size_t kRecordHeaderSize = 16;
 constexpr uint32_t kMaxRecord = 16u * 1024u * 1024u;
+constexpr size_t kReadChunk = 64u * 1024u;
 
 // Reads exactly n bytes; false if the stream ends first.
 bool read_exact(std::istream& in, uint8_t* dst, size_t n) {
@@ -113,8 +115,15 @@ PcapReader::Next PcapReader::next(PcapRecord& record) {
     r.read_u32(e, orig_len);
 
     if (incl_len > kMaxRecord) return Next::Corrupt;
-    buffer_.resize(incl_len);
-    if (incl_len > 0 && !read_exact(in_, buffer_.data(), incl_len)) return Next::Truncated;
+    // Grow the buffer chunk by chunk instead of trusting incl_len up front: a
+    // damaged length of 10 MB on a 2 KB file then costs 64 KB, not 10 MB.
+    buffer_.clear();
+    while (buffer_.size() < incl_len) {
+        const size_t chunk = std::min<size_t>(incl_len - buffer_.size(), kReadChunk);
+        const size_t old_size = buffer_.size();
+        buffer_.resize(old_size + chunk);
+        if (!read_exact(in_, buffer_.data() + old_size, chunk)) return Next::Truncated;
+    }
 
     // ts_sec is at most ~4.3e9, so ts_sec*1e9 fits in uint64 with room to spare.
     record.timestamp_ns = static_cast<uint64_t>(ts_sec) * 1000000000ull +

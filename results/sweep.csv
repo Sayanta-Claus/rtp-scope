@@ -1,0 +1,14 @@
+strategy,avg_latency_ms,late_or_lost_pct
+fixed-0ms,4.731,77.1556
+fixed-10ms,9.517,50.0889
+fixed-20ms,15.081,27.7111
+fixed-40ms,29.903,6.4889
+fixed-60ms,48.396,2.4889
+fixed-80ms,68.151,2.0444
+fixed-100ms,88.135,2.0222
+fixed-150ms,138.135,2.0222
+fixed-200ms,188.135,2.0222
+adaptive-k1,17.672,21.5556
+adaptive-k2,26.094,9.8000
+adaptive-k4,46.506,2.6222
+adaptive-k8,92.002,2.0222
