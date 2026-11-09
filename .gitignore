@@ -3,3 +3,5 @@ build*/
 *.truth
 .vscode/
 __pycache__/
+results/real-captures.txt
+captures/

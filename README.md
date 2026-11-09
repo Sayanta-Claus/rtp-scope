@@ -133,25 +133,14 @@ build-san/test_mutation
 
 ### Real captures
 
-The tests above all use traffic from `rtp_gen`, so I also ran three public captures. I haven't committed them (they're git-ignored). The [Wireshark SampleCaptures wiki](https://wiki.wireshark.org/SampleCaptures) lists public captures like these; check the terms there before reusing any. I used `MagicJack-_short_call.pcap` (two PCMU directions of a VoIP call), `h263-over-rtp.pcap` (H.263 video, loopback link type, with SIP on port 5060) and `aaa.pcap` (a short PCMA stream among DNS and NetBIOS traffic).
+I also ran three small public captures through rtp_scope and tshark 3.6.2: a two-way PCMU call, a short PCMA stream among DNS and NetBIOS traffic, and H.263 video over a loopback link. Both tools found the same 4 streams. Packets and loss agree on every stream, and jitter agrees to three decimals on 3 of the 4. The exception is the mean jitter of the H.263 stream (17.659 ms for rtp_scope, 15.505 ms for tshark), which I couldn't explain; the max matches. The table, the cause of each difference and the exact commands are in [results/real-captures.md](results/real-captures.md). The capture files are not in the repo because they contain IP addresses.
 
-```
-python3 scripts/crosscheck_pcap.py --bin build captures/*.pcap | tee results/real-captures.txt
-```
+None of the three captures has packet loss or reordering, so the loss and reordering logic has only been checked against generated traffic, not against a real lossy call.
 
-| capture | stream | packets (tshark / rtp_scope) | lost | mean jitter ms | max jitter ms |
-|---|---|---|---|---|---|
-| MagicJack | .10:49154 -> 216.234.64.16:54550, PCMU | 642 / 642 | 0 / 0 | 12.234 / 12.234 | 12.838 / 12.838 |
-| MagicJack | 216.234.64.16:54550 -> .10:49154, PCMU | 626 / 626 | 0 / 0 | 0.229 / 0.229 | 0.832 / 0.832 |
-| aaa | 192.168.1.2:30000 -> 212.242.33.36:40392, PCMA | 9 / 9 | 0 / 0 | 5.646 / 5.646 | 7.799 / 7.799 |
-| h263-over-rtp | 192.168.6.199:57128 -> :32976, H.263 | 45 / 45 | 0 / 0 | 15.505 / 17.659 | 32.186 / 32.187 |
+Running on real captures found two problems that generated traffic couldn't:
 
-Both tools find the same 4 streams and agree on packets and loss. Mean and max jitter agree exactly except for the H.263 mean. Running `rtp_scope` on the files had also shown some things my synthetic tests couldn't:
-
-- The first version reported DNS and NetBIOS packets as RTP "streams" (2 extra in MagicJack, 7 in `aaa.pcap`, plus 49 "malformed RTP" that were DNS). That led to the port list and sequence-number check described above.
-- `h263-over-rtp.pcap` has link type 0 (loopback), which was rejected, so I added it.
-
-The H.263 mean jitter is unexplained. The max matches to three decimals, so the per-packet jitter values are right; only the averaging differs (tshark 15.505, mine 17.659, a plain average of the same per-packet values). Video frames are split into several packets with the same RTP timestamp, which none of my other test streams do. I tried a few other averaging formulas and none reproduced tshark's number, so I don't know what it does there. Wireshark's own reading of this file also used `-o rtp.heuristic_rtp:TRUE`, so this checks the numbers, not the detection.
+- DNS and NetBIOS packets were reported as RTP "streams" (2 extra in one file, 7 in another, plus 49 "malformed RTP" that were DNS). That led to the port list and the sequence-number check described above.
+- The H.263 file uses link type 0 (loopback), which was rejected, so I added it.
 
 ### Jitter buffer sweep
 
@@ -216,7 +205,7 @@ tshark was told to decode UDP port 5004 as RTP, so this checks the numbers, not 
 - RTCP is not parsed.
 - The jitter-buffer model anchors playout to the first packet and ignores clock drift and loss concealment.
 - Reordering deeper than 100 packets is treated as a sequence jump (A.1 limits).
-- Not done yet: the GitHub Actions workflow hasn't run, and everything was tested on one machine (WSL2, GCC 11 and Clang 14). Real traffic was limited to three small public captures, none with loss or reordering.
+- Testing: the GitHub Actions workflow (GCC, Clang, sanitizers, the 120-trace validation and the fuzz run) passes on the latest commit. Everything ran on Linux, and my own runs were on one machine (WSL2, GCC 11 and Clang 14). Real traffic was three small public captures, so most of the testing is against generated traffic.
 
 ## Layout
 
