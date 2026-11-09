@@ -2,17 +2,15 @@
 //
 // What it does:
 //   For each pcap record: decode_frame -> classify_payload -> bump exactly one
-//   counter. Truncated or corrupt files stop the loop but keep the results.
+//   counter; RTP packets are additionally routed to their StreamStats.
+//   Truncated or corrupt files stop the loop but keep the results.
 //
-// Data flow: istream --> PcapReader --> Counters.
+// Data flow: istream --> PcapReader --> Counters + StreamStats per stream.
 //
 // Design decision:
 //   A truncated final record is the *normal* result of killing tcpdump, so it
 //   is a warning flag in Counters, not an error that discards the data.
 #include "analyzer.hpp"
-
-#include "classify.hpp"
-#include "net_decode.hpp"
 
 namespace rtpscope {
 
@@ -53,11 +51,34 @@ void Analyzer::handle_record(const PcapRecord& record) {
 
     RtpHeader header;
     switch (classify_payload(udp.payload, udp.payload_length, header)) {
-        case PacketClass::Rtp: ++counters_.rtp; break;
+        case PacketClass::Rtp:
+            ++counters_.rtp;
+            handle_rtp(record.timestamp_ns, udp, header);
+            break;
         case PacketClass::Rtcp: ++counters_.rtcp; break;
         case PacketClass::NotRtp: ++counters_.non_rtp_udp; break;
         case PacketClass::Malformed: ++counters_.malformed_rtp; break;
     }
+}
+
+void Analyzer::handle_rtp(uint64_t timestamp_ns, const UdpDatagram& udp, const RtpHeader& h) {
+    StreamKey key;
+    key.src_ip = udp.src_ip;
+    key.dst_ip = udp.dst_ip;
+    key.src_port = udp.src_port;
+    key.dst_port = udp.dst_port;
+    key.ssrc = h.ssrc;
+
+    if (last_stream_ == nullptr || !(last_stream_->key() == key)) {
+        auto it = index_.find(key);
+        if (it == index_.end()) {
+            streams_.push_back(std::make_unique<StreamStats>(
+                key, h.payload_type, rates_.rate_for(h.payload_type), keep_arrivals_));
+            it = index_.emplace(key, streams_.back().get()).first;
+        }
+        last_stream_ = it->second;
+    }
+    last_stream_->add_packet(timestamp_ns, h, udp.payload_length);
 }
 
 }  // namespace rtpscope

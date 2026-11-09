@@ -7,7 +7,7 @@
 //
 // Where it sits in the data flow:
 //   istream --> PcapReader --> decode_frame --> classify_payload
-//            --> counters (+ per-stream statistics, added in milestone 2).
+//            --> counters + per-stream statistics (StreamStats).
 //
 // Design decision:
 //   Every frame ends in exactly one bucket, so the counters always add up to
@@ -17,9 +17,16 @@
 
 #include <cstdint>
 #include <istream>
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
+#include "classify.hpp"
+#include "clock_rate.hpp"
+#include "net_decode.hpp"
 #include "pcap_reader.hpp"
+#include "stream_stats.hpp"
 
 namespace rtpscope {
 
@@ -41,6 +48,11 @@ struct Counters {
 
 class Analyzer {
 public:
+    // keep_arrivals: store every packet's arrival for the jitter-buffer
+    // simulator (costs ~32 bytes per packet, so it is opt-in).
+    explicit Analyzer(const ClockRates& rates = ClockRates(), bool keep_arrivals = false)
+        : rates_(rates), keep_arrivals_(keep_arrivals) {}
+
     // Reads a whole capture. Returns false (with `error` set) only for fatal
     // problems such as a bad header or unsupported link type; damaged records
     // are counted, not fatal.
@@ -50,9 +62,18 @@ public:
     uint32_t link_type() const { return link_type_; }
     bool nanosecond() const { return nano_; }
 
+    // Streams in order of first appearance.
+    const std::vector<std::unique_ptr<StreamStats>>& streams() const { return streams_; }
+
 private:
     void handle_record(const PcapRecord& record);
+    void handle_rtp(uint64_t timestamp_ns, const UdpDatagram& udp, const RtpHeader& header);
 
+    ClockRates rates_;
+    bool keep_arrivals_;
+    std::vector<std::unique_ptr<StreamStats>> streams_;
+    std::map<StreamKey, StreamStats*> index_;
+    StreamStats* last_stream_ = nullptr;  // cache: consecutive packets usually share a stream
     Counters counters_;
     uint32_t link_type_ = 0;
     bool nano_ = false;

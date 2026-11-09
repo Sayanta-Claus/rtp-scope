@@ -87,3 +87,78 @@ _Later milestones add: seq_tracker, jitter, stream_stats, report, rtp_gen, jitte
 **Questions**
 - *Why write it yourself?* Test data produced by independent code (a writer) checks the reader; it is also the basis of `rtp_gen`.
 - *How is the IPv4 checksum computed?* Ones'-complement sum of the header's 16-bit words (checksum field zero), fold carries, invert.
+
+---
+
+# Milestone 2: statistics modules
+
+Data flow added in this milestone:
+
+```
+ RtpHeader + arrival time
+        |
+        v
+ +----------------+  seq16   +--------------+
+ | stream_stats   | -------> | seq_tracker  |  extended seq, dup / ooo / loss
+ | (one per SSRC  |          +--------------+
+ |  + 5-tuple)    |  ts,t    +--------------+
+ |                | -------> | jitter       |  J += (|D|-J)/16
+ +----------------+          +--------------+
+        ^   clock rate  <--- clock_rate (PT table + --clock-rate)
+        |
+        v
+ +----------------+
+ | report         |  text tables / hand-written JSON
+ +----------------+
+```
+
+## seq_tracker (`src/seq_tracker.*`)
+
+**How it works.** Implements RFC 3550 Appendix A.1. `udelta = (uint16)(seq - max_seq)` is the forward distance mod 65536. Small forward steps (< 3000) are in-order (a gap means lost packets, and `seq < max_seq` means the counter wrapped so `cycles++`). A step that lands just *behind* the max (within 100) is late or duplicate. Anything else is a suspicious jump: it is rejected unless the very next packet continues from it (then the source restarted). A 65536-bit "seen" ring distinguishes duplicates from reordered packets. `expected = ext_highest - base + 1`; `lost = expected - unique received`.
+
+**Questions an interviewer might ask**
+- *Why does the sequence number need an extended 32-bit (here 64-bit) counter?* The field is 16 bits and wraps after 65536 packets, about 22 minutes at 50 packets/s. Without counting wraps you cannot compute "packets expected", so loss over a long call is wrong. RFC 3550 keeps `cycles` in the high 16 bits.
+- *How do you tell a wrap from a reordered packet?* Compare modulo 2^16: a small positive `udelta` is forward (even if the number is numerically smaller), a `udelta` near 65536 is a packet slightly behind.
+- *Why MAX_DROPOUT = 3000 and MAX_MISORDER = 100?* They bound how much loss or reordering we believe before suspecting a restart or a corrupt/foreign packet.
+- *Why can loss be negative in the RFC?* Duplicates count as received. We clamp to 0 and report duplicates on their own.
+- *What is the difference between lost and out-of-order?* An out-of-order packet arrives late; it is received, so it does not count as lost once it arrives.
+
+## jitter (`src/jitter.*`)
+
+**How it works.** For consecutive packets, `D = (arrival_i - arrival_{i-1}) - (ts_i - ts_{i-1})` in timestamp units; then `J += (|D| - J)/16`. Arrival gaps are converted from ns to timestamp units, and the timestamp difference is a signed 32-bit value so it survives the 2^32 wrap.
+
+**Questions**
+- *Why is jitter smoothed by 1/16?* It is a low-pass filter: single outliers move J by only 1/16 of their size, but a sustained change is tracked within tens of packets.
+- *Why do clocks not need to be synchronised?* Only differences between packets are used, so a constant clock offset or constant network delay cancels.
+- *Why is jitter in timestamp units?* Because the receiver can compute it without knowing wall-clock time; divide by the clock rate to get seconds (we also print ms).
+
+## clock_rate (`src/clock_rate.*`)
+
+**How it works.** A table of static payload types (RFC 3551) with a default of 48000 for dynamic types; `--clock-rate PT=HZ` overrides it.
+
+**Questions**
+- *G.722 is 16 kHz audio, so why 8000?* A historical error in the RFC was kept for compatibility: its RTP clock is 8000.
+- *Why can't the clock rate be read from the packet?* Dynamic payload types are bound to codecs in signalling (SDP), not in the RTP header.
+
+## stream_stats (`src/stream_stats.*`)
+
+**How it works.** One object per `(src ip, src port, dst ip, dst port, SSRC)`. Each packet updates byte and time totals, the sequence tracker and, unless it is a duplicate, the jitter estimator. Bitrate = RTP bytes x 8 / (last arrival - first arrival). Optionally records every arrival for the simulator.
+
+**Questions**
+- *Why include the SSRC in the key?* Several streams (audio, video, different participants) can share ports in a mixer or bundle.
+- *Why ignore duplicates in the jitter calculation?* A duplicate has the same RTP timestamp as the original but a later arrival, which would look like a big delay swing that never happened to the media.
+
+## report (`src/report.*`)
+
+**How it works.** Text and JSON are produced from the same accessors. JSON is written by hand; `json_escape` handles `"`, `\` and control characters (`\u00XX`).
+
+**Questions**
+- *Why hand-write JSON?* The project is dependency-free; JSON output is simple, and the only tricky part is string escaping (RFC 8259).
+- *Why never print nan/inf?* They are not valid JSON numbers.
+
+## cli_args (`src/cli_args.*`)
+
+**How it works.** `parse_uint` / `parse_double` accept only fully-numeric strings (decimal or `0x` hex for integers).
+
+**Questions**
+- *Why not `atoi`?* It returns 0 for garbage and ignores trailing text, hiding command-line typos.

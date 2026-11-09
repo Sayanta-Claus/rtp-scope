@@ -27,6 +27,12 @@ set(CORE_SOURCES
   src/rtp_header.cpp
   src/classify.cpp
   src/analyzer.cpp
+  src/seq_tracker.cpp
+  src/jitter.cpp
+  src/clock_rate.cpp
+  src/cli_args.cpp
+  src/stream_stats.cpp
+  src/report.cpp
   src/pcap_writer.cpp
 )
 
@@ -44,6 +50,10 @@ set(TEST_NAMES
   test_pcap
   test_net_decode
   test_rtp
+  test_seq
+  test_jitter
+  test_stats
+  test_report
 )
 foreach(t ${TEST_NAMES})
   add_executable(${t} tests/${t}.cpp)
